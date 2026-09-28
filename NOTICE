@@ -2,3 +2,4 @@ noware Hardware Playground
 Includes AirCube hardware design data and adapted firmware threshold calculations from StuckAtPrototype/AirCube (Apache License 2.0), via hyperchi/AirCube, commit bd857275c1f02efbec6942a96e433bde9d4d417e.
 https://github.com/StuckAtPrototype/AirCube
 Explorer UI, KiCad extraction tooling, and browser simulation added in 2026.
+The /dashboard section is AirCube Web (web/ in StuckAtPrototype/AirCube, Apache License 2.0) at upstream commit 71554f0, with user-facing text rebranded to noware and a link back to the explorer. Firmware binaries in public/dashboard/firmware are unmodified AirCube release assets.

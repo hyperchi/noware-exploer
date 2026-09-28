@@ -1,0 +1,61 @@
+{
+  "generated": "2026-09-28T21:53:13+00:00",
+  "latest": "2.0.7",
+  "releases": [
+    {
+      "version": "2.0.7",
+      "tag": "Release_v2.0.7",
+      "file": "AirCube_firmware_v2.0.7.bin",
+      "size": 959504,
+      "sha256": "c56bce9305139b6a522e596d84118f4c9f822881c3a90670df4e2f69b5898e55",
+      "address": "0x0",
+      "prerelease": false,
+      "publishedAt": "2026-09-04T15:07:16Z",
+      "notesUrl": "https://github.com/StuckAtPrototype/AirCube/releases/tag/Release_v2.0.7"
+    },
+    {
+      "version": "2.0.4",
+      "tag": "Release_V2.0.4",
+      "file": "AirCube_firmware_v2.0.4.bin",
+      "size": 956288,
+      "sha256": "21c7c6d914703ef2801d0fc17e6c8f03d3380ee987e442588644a2a49115bc9b",
+      "address": "0x0",
+      "prerelease": false,
+      "publishedAt": "2026-08-13T16:03:42Z",
+      "notesUrl": "https://github.com/StuckAtPrototype/AirCube/releases/tag/Release_V2.0.4"
+    },
+    {
+      "version": "2.0.3",
+      "tag": "Release_v2.0.3",
+      "file": "AirCube_firmware_v2.0.3.bin",
+      "size": 955008,
+      "sha256": "42d63b198f74000818a2b6182da44c1374d3713c95aa36ee71597e78c9c28c8e",
+      "address": "0x0",
+      "prerelease": false,
+      "publishedAt": "2026-08-12T22:12:48Z",
+      "notesUrl": "https://github.com/StuckAtPrototype/AirCube/releases/tag/Release_v2.0.3"
+    },
+    {
+      "version": "2.0.1",
+      "tag": "Release_v2.0.1",
+      "file": "AirCube_firmware_v2.0.1.bin",
+      "size": 945200,
+      "sha256": "6c95baa2af7629588671280cb934933ae89a4c91df16a9a3489afe604bf9f65c",
+      "address": "0x0",
+      "prerelease": false,
+      "publishedAt": "2026-07-31T16:38:46Z",
+      "notesUrl": "https://github.com/StuckAtPrototype/AirCube/releases/tag/Release_v2.0.1"
+    },
+    {
+      "version": "1.5.2",
+      "tag": "Release_V1.5.2",
+      "file": "AirCube_firmware_v1.5.2.bin",
+      "size": 632192,
+      "sha256": "0aa83bcbfec20d95232efd9b8ec524b66d104317cfc444cc8b317610c18def58",
+      "address": "0x0",
+      "prerelease": false,
+      "publishedAt": "2026-06-02T16:18:57Z",
+      "notesUrl": "https://github.com/StuckAtPrototype/AirCube/releases/tag/Release_V1.5.2"
+    }
+  ]
+}

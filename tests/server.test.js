@@ -9,7 +9,7 @@ test('Cloud Run server protects assets and exposes only login and health',async(
  const base='http://127.0.0.1:'+server.address().port;
  const withHost=(path,headers)=>new Promise((resolve,reject)=>{http.get(base+path,{headers},res=>{res.resume();resolve({status:res.statusCode,location:res.headers.location})}).on('error',reject)});
  try{
-  for(const url of ['/','/board.json','/source/AirCube.kicad_pcb','/source/AirCube.kicad_sch','/models/esp32-h2-mini-1.json']){
+  for(const url of ['/','/board.json','/source/AirCube.kicad_pcb','/source/AirCube.kicad_sch','/models/esp32-h2-mini-1.json','/dashboard/','/dashboard/js/app.js','/dashboard/firmware/manifest.json']){
    const r=await fetch(base+url,{redirect:'manual'});assert.equal(r.status,303);assert.equal(r.headers.get('location'),'/login');
   }
   assert.equal((await fetch(base+'/api/health')).status,200);
