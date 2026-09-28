@@ -219,8 +219,9 @@ export class HistoryChart {
    * @param {(v: number) => string} format value formatter for the scrub readout
    * @param {[number, number]} xRange visible time window in unix seconds
    */
-  setData(segments, colorVar, format, xRange) {
+  setData(segments, colorVar, format, xRange, zones = []) {
     this.format = format;
+    this.zones = zones;
     const xs = [];
     const ys = [];
     segments.forEach((segment, index) => {
@@ -267,6 +268,8 @@ export class HistoryChart {
     const grid = cssVar(this.host, "--card-border");
     const axisText = cssVar(this.host, "--faint");
     const font = `11px ${cssVar(document.documentElement, "--font") || "sans-serif"}`;
+    // Indexed by quality level (FAIR, POOR, BAD), matching the q-* pill colours.
+    this.zoneColors = [null, "--q-warn", "--q-bad", "--q-crit"].map((v) => v && cssVar(this.host, v));
 
     const opts = {
       width,
@@ -284,6 +287,22 @@ export class HistoryChart {
         y: {
           range: (u, min, max) => {
             if (min == null || max == null) return [0, 1];
+            // Pull the healthy-range limit into view when the data stops short of
+            // it, so a clean stretch still shows its headroom. Limits far from
+            // the data are left out rather than flattening the line.
+            const zones = this.zones || [];
+            const upper = zones.filter((z) => z.from != null).map((z) => z.from);
+            const lower = zones.filter((z) => z.from == null).map((z) => z.to);
+            const span = max - min;
+            const near = (edge, gap) => gap <= Math.max(span * 0.5, Math.abs(edge) * 0.25);
+            if (upper.length) {
+              const edge = Math.min(...upper);
+              if (edge > max && near(edge, edge - max)) max = edge;
+            }
+            if (lower.length) {
+              const edge = Math.max(...lower);
+              if (edge < min && near(edge, min - edge)) min = edge;
+            }
             const pad = (max - min || Math.abs(max) || 1) * 0.15;
             return [min - pad, max + pad];
           },
@@ -307,7 +326,7 @@ export class HistoryChart {
       series: [
         {},
         {
-          stroke,
+          stroke: (u) => this._lineStroke(u, stroke),
           width: 2,
           spanGaps: false,
           points: { show: false },
@@ -321,6 +340,8 @@ export class HistoryChart {
         },
       ],
       hooks: {
+        // Axes draw before series, so bands sit behind the line.
+        drawAxes: [(u) => this._drawZones(u)],
         setCursor: [
           (u) => {
             const idx = u.cursor.idx;
@@ -335,6 +356,78 @@ export class HistoryChart {
     };
 
     this.plot = new uPlot(opts, this.data, this.host);
+  }
+
+  /** Tinted band, dashed edge and label for each zone inside the y range. */
+  _drawZones(u) {
+    const zones = this.zones;
+    const { min, max } = u.scales.y;
+    if (!zones?.length || min == null || max == null) return;
+    const { ctx, bbox } = u;
+    const dpr = uPlot.pxRatio || 1;
+    const y = (v) => u.valToPos(v, "y", true);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bbox.left, bbox.top, bbox.width, bbox.height);
+    ctx.clip();
+    ctx.font = `600 ${10 * dpr}px ${cssVar(document.documentElement, "--font") || "sans-serif"}`;
+    ctx.textAlign = "right";
+    for (const z of zones) {
+      const lo = Math.max(z.from ?? -Infinity, min);
+      const hi = Math.min(z.to ?? Infinity, max);
+      if (hi <= lo) continue;
+      const color = this.zoneColors[z.level];
+      const top = y(hi);
+      const bottom = y(lo);
+      ctx.fillStyle = withAlpha(color, 0.1);
+      ctx.fillRect(bbox.left, top, bbox.width, bottom - top);
+
+      ctx.strokeStyle = withAlpha(color, 0.7);
+      ctx.lineWidth = dpr;
+      ctx.setLineDash([4 * dpr, 4 * dpr]);
+      for (const edge of [z.from, z.to]) {
+        if (edge == null || edge <= min || edge >= max) continue;
+        ctx.beginPath();
+        ctx.moveTo(bbox.left, y(edge));
+        ctx.lineTo(bbox.left + bbox.width, y(edge));
+        ctx.stroke();
+      }
+
+      if (bottom - top >= 14 * dpr) {
+        // Label sits beside the edge where the zone begins, on a backing plate
+        // so it stays readable where the line runs through it.
+        const labelY = z.from == null ? top + 12 * dpr : bottom - 4 * dpr;
+        const labelX = bbox.left + bbox.width - 6 * dpr;
+        const w = ctx.measureText(z.label).width;
+        ctx.fillStyle = withAlpha(cssVar(this.host, "--card") || "#000", 0.85);
+        ctx.fillRect(labelX - w - 4 * dpr, labelY - 10 * dpr, w + 8 * dpr, 13 * dpr);
+        ctx.fillStyle = color;
+        ctx.fillText(z.label, labelX, labelY);
+      }
+    }
+    ctx.restore();
+  }
+
+  /** Vertical gradient with hard stops, so the line takes each zone's colour. */
+  _lineStroke(u, base) {
+    const zones = this.zones;
+    const { min, max } = u.scales.y;
+    const { top, height } = u.bbox;
+    if (!zones?.length || min == null || max == null || !height) return base;
+    const edges = [...new Set(zones.flatMap((z) => [z.from, z.to]))]
+      .filter((v) => v != null && v > min && v < max)
+      .sort((a, b) => b - a);
+    const bounds = [max, ...edges, min];
+    const frac = (v) => Math.min(1, Math.max(0, (u.valToPos(v, "y", true) - top) / height));
+    const gradient = u.ctx.createLinearGradient(0, top, 0, top + height);
+    for (let i = 0; i < bounds.length - 1; i++) {
+      const mid = (bounds[i] + bounds[i + 1]) / 2;
+      const zone = zones.find((z) => (z.from == null || mid >= z.from) && (z.to == null || mid < z.to));
+      const color = zone ? this.zoneColors[zone.level] : base;
+      gradient.addColorStop(frac(bounds[i]), color);
+      gradient.addColorStop(frac(bounds[i + 1]), color);
+    }
+    return gradient;
   }
 
   destroy() {

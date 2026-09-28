@@ -9,6 +9,7 @@
 import { h, toast } from "./ui.js";
 import { applyAppearance } from "./prefs.js";
 import { DeviceRegistry } from "./devices.js";
+import { ShareFeed } from "./share.js";
 import { HomeView } from "./views/home.js";
 import { DetailView } from "./views/detail.js";
 import { SettingsView } from "./views/settings.js";
@@ -59,22 +60,23 @@ class App {
   async start() {
     applyAppearance();
 
-    if (!this.registry.supported) {
-      this.showBanner(
-        "This browser cannot talk to USB devices. Web Serial is available in Chrome, Edge and other Chromium browsers on desktop.",
-        "warn",
-      );
-      this.render();
-      return;
-    }
-
     window.addEventListener("hashchange", () => this.render());
     this.registry.addEventListener("change", () => this.onRegistryChange());
 
-    try {
-      await this.registry.init();
-    } catch (err) {
-      this.showBanner(`Could not list serial ports: ${err.message}`, "warn");
+    // A cube shared by a teammate shows up without USB, in any browser.
+    new ShareFeed(this.registry).start();
+
+    if (!this.registry.supported) {
+      this.showBanner(
+        "This browser cannot connect to a cube over USB, but a cube shared by a teammate still shows here. Web Serial is available in Chrome, Edge and other Chromium browsers on desktop.",
+        "warn",
+      );
+    } else {
+      try {
+        await this.registry.init();
+      } catch (err) {
+        this.showBanner(`Could not list serial ports: ${err.message}`, "warn");
+      }
     }
 
     this.onRegistryChange();
@@ -90,6 +92,10 @@ class App {
   }
 
   async connect() {
+    if (!this.registry.supported) {
+      toast("Connecting a cube needs Chrome or Edge on a desktop.", "err");
+      return;
+    }
     try {
       await this.registry.requestPort();
     } catch (err) {

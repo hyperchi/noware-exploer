@@ -32,6 +32,9 @@ import {
   liveMetricValue,
   metricFloor,
   historySegments,
+  chartZones,
+  zoneBoundsText,
+  secondsInZones,
   HISTORY_METRICS,
   HISTORY_RANGES,
   CO2_VALID_FLOOR,
@@ -41,6 +44,13 @@ import {
   formatDayTime,
   GOOD,
 } from "../quality.js";
+
+/** How this laptop's cube stands with the team view on noware.so. */
+function shareText(device) {
+  if (device.shareState === "sharing") return " · shared with team";
+  if (device.shareState === "blocked") return ` · not shared (${device.shareBlockedBy} is sharing)`;
+  return "";
+}
 
 class MetricTile {
   constructor(key, caption, colorClass) {
@@ -200,6 +210,7 @@ export class DetailView {
     this.chartLoading.style.display = "none";
     this.chartReadout = h("span.faint", { text: "Hover the chart to read values" });
     this.chart = new HistoryChart(this.chartHost, (point) => this._onScrub(point));
+    this.zoneNote = h("div.zone-note");
 
     this.stats = ["Peak", "Average", "Lowest"].map((name) => {
       const value = h("div.value", { text: "--" });
@@ -234,6 +245,7 @@ export class DetailView {
         this.chartEmpty,
         this.chartLoading,
       ),
+      this.zoneNote,
       h("div.stats-row", ...this.stats.map((s) => s.el)),
       h("div.row", this.syncStatus, h("div.spacer"), this.syncBtn),
     );
@@ -278,6 +290,23 @@ export class DetailView {
     }
   }
 
+  _renderZoneNote(zones, points, format) {
+    this.zoneNote.replaceChildren();
+    if (!zones.length) return;
+    const bounds = zoneBoundsText(zones, (v) => format(v).replace(/\.0(?=\D|$)/, "").replace(" %", "%"));
+    const seconds = secondsInZones(points, zones);
+    const rangeLabel = HISTORY_RANGES.find((r) => r.seconds === this.rangeSeconds)?.label.toLowerCase();
+    const time =
+      seconds < 60
+        ? "Not outside the healthy range"
+        : `Outside the healthy range for ${seconds < 5400 ? `${Math.round(seconds / 60)} min` : `${(seconds / 3600).toFixed(seconds < 36000 ? 1 : 0)} h`}`;
+    this.zoneNote.append(
+      h("span.zone-swatch"),
+      h("span", { text: `Shaded = unhealthy (${bounds}). ` }),
+      h(seconds < 60 ? "span.faint" : "strong", { text: `${time} in the ${rangeLabel}.` }),
+    );
+  }
+
   // ------------------------------------------------------------------ actions
 
   _syncNow() {
@@ -287,6 +316,13 @@ export class DetailView {
   _openMenu() {
     const device = this.device;
     if (!device) return;
+    if (device.isRemote) {
+      openMenu(this.menuBtn, [
+        { label: "Refresh", onSelect: () => this._syncNow() },
+        { label: "Export CSV", onSelect: () => this._exportCsv() },
+      ]);
+      return;
+    }
     openMenu(this.menuBtn, [
       { label: "Sync now", onSelect: () => this._syncNow() },
       { label: "Export CSV", onSelect: () => this._exportCsv() },
@@ -404,9 +440,12 @@ export class DetailView {
 
     const online = device.isOnline;
     this.connDot.className = online ? "dot tinted q-good" : "dot";
-    this.connLabel.textContent = device.isConnected
-      ? `${online ? "Connected" : "Waiting for data"} · ${updatedAgo(device.lastUpdated)}`
-      : "Disconnected";
+    this.connLabel.textContent = device.isRemote
+      ? `${online ? "Live" : "Offline"} · shared by ${device.publisher || "a teammate"} · ${updatedAgo(device.lastUpdated)}`
+      : device.isConnected
+        ? `${online ? "Connected" : "Waiting for data"} · ${updatedAgo(device.lastUpdated)}${shareText(device)}`
+        : "Disconnected";
+    this.briCard.style.display = device.isRemote ? "none" : "";
 
     if (!reading) {
       this.hero.className = "card hero q-none";
@@ -457,7 +496,9 @@ export class DetailView {
     this.advRows.fw.textContent = device.fwVersion
       ? `v${device.fwVersion}`
       : "not reported by this firmware";
-    this.advRows.transport.textContent = "USB (Web Serial)";
+    this.advRows.transport.textContent = device.isRemote
+      ? `Shared via noware.so by ${device.publisher || "a teammate"}`
+      : "USB (Web Serial)";
 
     if (device.ledPercent != null) {
       this.briSlider.setValue(device.ledPercent);
@@ -507,10 +548,11 @@ export class DetailView {
     if (live.length) {
       segments.push(live.map((point) => [point.time, convert(point.value)]));
     }
+    const zones = chartZones(metric.key, useF);
     this.chart.setData(segments, `--m-${metric.key}`, format, [
       now - this.rangeSeconds,
       now,
-    ]);
+    ], zones);
     const points = [
       ...validHistory.map((s) => ({
         value: convert(slotValues(metric.key, s)[0]),
@@ -519,6 +561,7 @@ export class DetailView {
       ...live.map((point) => ({ value: convert(point.value), time: point.time })),
     ];
     this.chartEmpty.style.display = points.length || device.isSyncing ? "none" : "";
+    this._renderZoneNote(zones, points, format);
 
     // 2-hour sparklines on the tiles (24 slots of 5 minutes).
     const spark = device.sparklineSlots(24);
@@ -587,7 +630,8 @@ export class DetailView {
       // while we are still fetching it.
       this.chartEmpty.style.display = "none";
     }
-    this.syncBtn.disabled = device.isSyncing || !device.isConnected;
+    this.syncBtn.textContent = device.isRemote ? "Refresh" : "Sync from device";
+    this.syncBtn.disabled = device.isSyncing || (!device.isConnected && !device.isRemote);
   }
 
   _onScrub(point) {

@@ -74,6 +74,7 @@ jobs:
             --image="$DEPLOY_IMAGE" \
             --project="$GCP_PROJECT" \
             --region="$GCP_REGION" \
+            --max-instances=1 \
             --update-labels="managed-by=github-actions,git-sha=${GITHUB_SHA}" \
             --quiet
       - name: Verify live service

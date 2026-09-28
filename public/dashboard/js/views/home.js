@@ -147,10 +147,13 @@ class DeviceCard {
 
     this.co2Box.style.display = device.isPro ? "" : "none";
     this.sparkCaption.textContent = `${device.isPro ? "CO2" : "VOC"} · last 2 hours`;
-    this.updated.textContent = device.isConnected
-      ? updatedAgo(device.lastUpdated)
-      : "Disconnected";
+    this.updated.textContent = device.isRemote
+      ? `${device.isConnected ? updatedAgo(device.lastUpdated) : "Offline"} · shared by ${device.publisher || "a teammate"}`
+      : device.isConnected
+        ? updatedAgo(device.lastUpdated)
+        : "Disconnected";
 
+    this.ledToggle.style.display = device.isRemote ? "none" : "";
     if (device.ledPercent != null) {
       this.ledToggle.setAttribute("aria-checked", String(device.ledPercent > 0));
     }
@@ -197,7 +200,9 @@ export class HomeView {
       "div.empty-state",
       h("span.glyph", { text: "\u2b1c" }),
       h("div", { text: "No devices yet." }),
-      h("div", { text: "Plug one in over USB-C and click Connect." }),
+      h("div", {
+        text: "Plug one in over USB-C and click Connect. A cube a teammate is sharing appears here automatically.",
+      }),
     );
 
     this.el = h(

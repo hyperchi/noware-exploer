@@ -2,10 +2,11 @@ import express from 'express';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import auth from './api/auth.js';
+import {cubeRouter} from './api/cube.js';
 import {readSession,getCookie,SESSION_COOKIE} from './lib/session.js';
 import {ALLOWED_DOMAIN} from './lib/auth-policy.js';
 
-export function createApp(){
+export function createApp({cubeStore}={}){
  const app=express();
  const dist=fileURLToPath(new URL('./dist/',import.meta.url));
  app.disable('x-powered-by');
@@ -24,8 +25,10 @@ export function createApp(){
  app.use(async(req,res,next)=>{
   const session=await readSession(getCookie(req.headers.cookie,SESSION_COOKIE),{secret:process.env.SESSION_SECRET,domain:ALLOWED_DOMAIN});
   if(!session)return res.redirect(303,'/login');
+  req.session=session;
   next();
  });
+ app.use('/api/cube',cubeRouter(cubeStore));
  app.use(express.static(dist,{dotfiles:'deny',etag:false,lastModified:false,setHeaders:res=>res.setHeader('Cache-Control','private, no-store')}));
  app.use((req,res)=>res.status(404).send('Not found'));
  app.use((err,req,res,next)=>{res.status(err.status===413?413:400).json({error:'Request could not be processed.'})});

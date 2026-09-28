@@ -10,6 +10,7 @@
 import { SerialLink } from "./serial.js";
 import * as proto from "./protocol.js";
 import { LIVE_RANGE_SECONDS, seqDistance } from "./quality.js";
+import { SharePublisher } from "./share.js";
 
 /** A cube counts as online while a reading has arrived within this window. */
 const ONLINE_WINDOW_S = 15;
@@ -164,6 +165,7 @@ export class Device extends EventTarget {
     // flasher recorded for this cube rather than blanking it.
     if (reading.fwVersion) this.fwVersion = reading.fwVersion;
     this.frcNeeded = Boolean(reading.frcNeeded);
+    this.dispatchEvent(new CustomEvent("reading", { detail: reading }));
     this._changed();
   }
 
@@ -305,6 +307,7 @@ export class Device extends EventTarget {
 
       this._anchorAndStore(collected);
       this.lastSyncedAt = Date.now() / 1000;
+      this.dispatchEvent(new CustomEvent("history"));
     } catch (err) {
       this.syncError = err.message || String(err);
     } finally {
@@ -463,6 +466,7 @@ export class DeviceRegistry extends EventTarget {
     }
 
     device.addEventListener("change", () => this._changed());
+    device.publisher = new SharePublisher(device);
     this.devices.push(device);
     this._changed();
     return device;
@@ -483,7 +487,7 @@ export class DeviceRegistry extends EventTarget {
 
   /** Lowest unused slot, so forgetting a cube frees its name for the next one. */
   _nextSlot() {
-    const used = new Set(this.devices.map((d) => d.slot));
+    const used = new Set(this.devices.filter((d) => !d.isRemote).map((d) => d.slot));
     let slot = 0;
     while (used.has(slot)) slot++;
     return slot;
@@ -505,6 +509,7 @@ export class DeviceRegistry extends EventTarget {
       // Chrome before 103 has no SerialPort.forget(); the cube still goes
       // away for this session, it just comes back on the next load.
     }
+    device.publisher?.stop();
     this.devices = this.devices.filter((d) => d !== device);
     this._changed();
   }
@@ -512,8 +517,21 @@ export class DeviceRegistry extends EventTarget {
   _drop(device) {
     device.isConnected = false;
     if (!device.inFlashGrace) {
+      device.publisher?.stop();
       this.devices = this.devices.filter((d) => d !== device);
     }
+    this._changed();
+  }
+
+  /** A cube shared from another laptop (see share.js). */
+  addRemote(device) {
+    device.addEventListener("change", () => this._changed());
+    this.devices.push(device);
+    this._changed();
+  }
+
+  removeRemote(device) {
+    this.devices = this.devices.filter((d) => d !== device);
     this._changed();
   }
 

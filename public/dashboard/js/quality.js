@@ -125,6 +125,64 @@ export function tileStatus(key, value) {
   return { text, quality: tileStatusQuality(key, value) };
 }
 
+// ------------------------------------------------------------ chart zones
+
+/* Out-of-range bands for the history chart, using the same edges as the tile
+ * statuses above so the chart shading agrees with the pills. `from`/`to` are
+ * in the metric's display unit; null means unbounded on that side. */
+const ZONES = {
+  co2: [
+    { from: 800, to: 1200, level: FAIR, label: "Elevated" },
+    { from: 1200, to: 2000, level: POOR, label: "High" },
+    { from: 2000, to: null, level: BAD, label: "Very high" },
+  ],
+  voc: [
+    { from: 220, to: 660, level: FAIR, label: "Moderate" },
+    { from: 660, to: 2200, level: POOR, label: "Elevated" },
+    { from: 2200, to: null, level: BAD, label: "High" },
+  ],
+  hum: [
+    { from: null, to: 30, level: FAIR, label: "Dry" },
+    { from: 60, to: null, level: FAIR, label: "Humid" },
+  ],
+  temp: [
+    { from: null, to: 18, level: FAIR, label: "Cool" },
+    { from: 26, to: 30, level: FAIR, label: "Warm" },
+    { from: 30, to: null, level: POOR, label: "Hot" },
+  ],
+};
+
+export function chartZones(metricKey, fahrenheit = false) {
+  const zones = ZONES[metricKey] || [];
+  if (metricKey !== "temp" || !fahrenheit) return zones;
+  const f = (c) => (c == null ? null : cToF(c));
+  return zones.map((z) => ({ ...z, from: f(z.from), to: f(z.to) }));
+}
+
+export const inZone = (zones, v) =>
+  zones.find((z) => (z.from == null || v >= z.from) && (z.to == null || v < z.to)) || null;
+
+/** "above 800 ppm" / "below 30% or above 60%": where the healthy range ends. */
+export function zoneBoundsText(zones, format) {
+  const low = zones.filter((z) => z.from == null).map((z) => z.to);
+  const high = zones.filter((z) => z.from != null).map((z) => z.from);
+  const parts = [];
+  if (low.length) parts.push(`below ${format(Math.max(...low))}`);
+  if (high.length) parts.push(`above ${format(Math.min(...high))}`);
+  return parts.join(" or ");
+}
+
+/** Seconds spent inside any zone. Gaps over 15 min are not counted. */
+export function secondsInZones(points, zones) {
+  const sorted = [...points].sort((a, b) => a.time - b.time);
+  let total = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const dt = sorted[i].time - sorted[i - 1].time;
+    if (dt > 0 && dt <= 900 && inZone(zones, sorted[i].value)) total += dt;
+  }
+  return total;
+}
+
 // ------------------------------------------------------------------ metrics
 
 /** CO2 readings at or below this are treated as missing (iOS HistoryProcessing). */
