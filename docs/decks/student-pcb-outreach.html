@@ -4,52 +4,69 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Student PCB Project</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0; }
 
     :root {
-      --page: #E8E3DE;
-      --bg: #F5F0EB;
-      --text: #1A1A1A;
-      --text-secondary: #5A5A5A;
-      --green: #4A7C59;
-      --green-light: #E8F0EA;
-      --on-green: #FFFFFF;
+      --page: #EDEDED;
+      --bg: #FAFAFA;
+      --text: #080808;
+      --text-secondary: #6B6B6B;
       --card: #FFFFFF;
-      --border: #D9D3CC;
-      --shadow: rgba(0,0,0,0.08);
+      --line: #000000;
+      --divider: #DDDDDD;
+      --invert-bg: #000000;
+      --invert-text: #FFFFFF;
+      --invert-muted: rgba(255,255,255,0.45);
+      --mint: #F1FBF6;
+      --lavender: #F3F0FB;
+      --periwinkle: #ECF1FB;
+      --pink: #FFF3F5;
+      --purple: #7C52D4;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --page: #121412;
-        --bg: #1C1F1C;
-        --text: #F2EFEA;
-        --text-secondary: #A9A59F;
-        --green: #7DB38D;
-        --green-light: #263329;
-        --on-green: #0F1A12;
-        --card: #252925;
-        --border: #3A3F3A;
-        --shadow: rgba(0,0,0,0.4);
+        --page: #000000;
+        --bg: #0A0A0A;
+        --text: #F7F7F7;
+        --text-secondary: #8C8C8C;
+        --card: #121212;
+        --line: #F7F7F7;
+        --divider: #2A2A2A;
+        --invert-bg: #F7F7F7;
+        --invert-text: #0A0A0A;
+        --invert-muted: rgba(10,10,10,0.5);
+        --mint: #12221A;
+        --lavender: #1C1830;
+        --periwinkle: #141C2C;
+        --pink: #2A1418;
+        --purple: #A88AF0;
       }
     }
     :root[data-theme="dark"] {
-      --page: #121412;
-      --bg: #1C1F1C;
-      --text: #F2EFEA;
-      --text-secondary: #A9A59F;
-      --green: #7DB38D;
-      --green-light: #263329;
-      --on-green: #0F1A12;
-      --card: #252925;
-      --border: #3A3F3A;
-      --shadow: rgba(0,0,0,0.4);
+      --page: #000000;
+      --bg: #0A0A0A;
+      --text: #F7F7F7;
+      --text-secondary: #8C8C8C;
+      --card: #121212;
+      --line: #F7F7F7;
+      --divider: #2A2A2A;
+      --invert-bg: #F7F7F7;
+      --invert-text: #0A0A0A;
+      --invert-muted: rgba(10,10,10,0.5);
+      --mint: #12221A;
+      --lavender: #1C1830;
+      --periwinkle: #141C2C;
+      --pink: #2A1418;
+      --purple: #A88AF0;
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+      letter-spacing: -0.01em;
       background: var(--page);
       color: var(--text);
       display: flex;
@@ -65,15 +82,16 @@
       max-width: 100%;
       height: 720px;
       background: var(--bg);
-      border-radius: 8px;
+      border: 3px solid var(--line);
       padding: 48px 64px;
       display: flex;
       flex-direction: column;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 4px 24px var(--shadow);
       page-break-after: always;
     }
+    .slide.invert { background: var(--invert-bg); color: var(--invert-text); }
+    .slide.invert .slide-number, .slide.invert .slide-header .muted { color: var(--invert-muted); }
 
     .slide-header {
       display: flex;
@@ -81,10 +99,18 @@
       align-items: center;
       margin-bottom: 40px;
       font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 2px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
     }
+    .wordmark {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 24px;
+      font-weight: 400;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    .slide-header .muted { color: var(--text-secondary); }
 
     .slide-number {
       position: absolute;
@@ -94,159 +120,152 @@
       color: var(--text-secondary);
     }
 
-    .main-title {
-      font-size: 72px;
-      font-weight: 900;
-      line-height: 1.05;
-      margin-bottom: 16px;
-      letter-spacing: -2px;
-    }
-    .subtitle {
-      font-size: 22px;
-      color: var(--text-secondary);
-      max-width: 720px;
-      line-height: 1.45;
-    }
-    .pill {
-      display: inline-block;
-      background: var(--green);
-      color: var(--on-green);
-      padding: 4px 16px;
-      border-radius: 6px;
-      font-size: 22px;
-      font-weight: 600;
-    }
-
-    h2 {
-      font-size: 36px;
-      font-weight: 800;
-      margin-bottom: 8px;
-      letter-spacing: -0.5px;
-    }
-    h2 .h2-light {
+    .main-title, h2 {
+      font-family: 'DM Serif Display', Georgia, serif;
       font-weight: 400;
-      color: var(--text-secondary);
-      margin-left: 8px;
-      font-size: 24px;
+      letter-spacing: -0.02em;
     }
-    .lede {
-      font-size: 15px;
-      color: var(--text-secondary);
-      margin-bottom: 24px;
-      max-width: 820px;
-      line-height: 1.5;
+    .main-title { font-size: 84px; line-height: 1.0; margin-bottom: 20px; }
+    .main-title em { font-style: italic; }
+    .subtitle { font-size: 22px; max-width: 720px; line-height: 1.45; opacity: 0.75; }
+    .tag {
+      display: inline-block;
+      border: 3px solid currentColor;
+      padding: 8px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
     }
 
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
+    h2 { font-size: 48px; line-height: 1.05; margin-bottom: 10px; }
+    h2 .h2-light {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-left: 14px;
+      vertical-align: middle;
     }
-    .info-grid.three-col { grid-template-columns: 1fr 1fr 1fr; }
+    .lede { font-size: 16px; color: var(--text-secondary); margin-bottom: 24px; max-width: 840px; line-height: 1.55; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .info-grid.three-col { grid-template-columns: repeat(3, 1fr); }
+    .info-grid.four-col { grid-template-columns: repeat(4, 1fr); }
     .info-card {
       background: var(--card);
-      border-radius: 12px;
-      padding: 24px 28px;
+      border: 3px solid var(--line);
+      padding: 22px 24px;
       display: flex;
       flex-direction: column;
+      color: var(--text);
     }
+    .info-card.mint { background: var(--mint); }
+    .info-card.lavender { background: var(--lavender); }
+    .info-card.periwinkle { background: var(--periwinkle); }
+    .info-card.pink { background: var(--pink); }
     .card-label {
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--green);
-      margin-bottom: 10px;
+      letter-spacing: 0.2em;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
     }
-    .card-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .card-title { font-size: 19px; font-weight: 700; margin-bottom: 6px; }
     .card-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
 
-    .callout {
-      padding: 14px 20px;
-      background: var(--green-light);
-      border: 1.5px solid var(--green);
-      border-radius: 10px;
-      font-size: 15px;
-      line-height: 1.6;
-    }
-    .callout strong { color: var(--green); }
+    .callout { border: 3px solid var(--line); background: var(--lavender); padding: 16px 22px; font-size: 15px; line-height: 1.6; }
 
-    .numbered-list { list-style: none; display: flex; flex-direction: column; gap: 16px; }
-    .numbered-list li { display: flex; align-items: flex-start; gap: 14px; font-size: 16px; line-height: 1.5; }
-    .numbered-list .n {
-      width: 28px; height: 28px; min-width: 28px;
-      border-radius: 50%;
-      background: var(--green);
-      color: var(--on-green);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700;
+    .numbered-list { list-style: none; display: flex; flex-direction: column; }
+    .numbered-list li {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      align-items: baseline;
+      padding: 14px 0;
+      border-top: 1px solid var(--divider);
+      font-size: 16px;
+      line-height: 1.5;
     }
+    .numbered-list li:last-child { border-bottom: 1px solid var(--divider); }
+    .numbered-list .n { font-family: 'DM Serif Display', Georgia, serif; font-size: 30px; line-height: 1; }
     .numbered-list strong { display: block; font-size: 17px; margin-bottom: 2px; }
-    .numbered-list span.d { color: var(--text-secondary); font-size: 14px; }
+    .numbered-list .d { color: var(--text-secondary); font-size: 14px; }
 
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; flex: 1; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1; }
+    .col-section { border: 3px solid var(--line); background: var(--card); padding: 22px 26px; }
+    .col-section.mint { background: var(--mint); }
     .col-section h3 {
-      font-size: 16px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 1px;
-      color: var(--green);
-      margin-bottom: 16px; padding-bottom: 8px;
-      border-bottom: 2px solid var(--green-light);
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.2em;
+      margin-bottom: 14px;
     }
     .checklist { list-style: none; display: flex; flex-direction: column; gap: 12px; }
-    .checklist li { display: flex; align-items: flex-start; gap: 12px; font-size: 16px; line-height: 1.5; }
+    .checklist li { display: flex; align-items: flex-start; gap: 12px; font-size: 16px; line-height: 1.45; }
     .checklist .d { color: var(--text-secondary); font-size: 14px; }
-    .check-icon {
-      width: 22px; height: 22px; min-width: 22px;
-      border-radius: 50%;
-      background: var(--green-light);
-      display: flex; align-items: center; justify-content: center;
-      margin-top: 2px;
+    .checklist .mark { font-weight: 700; min-width: 16px; }
+    .req {
+      display: inline-block;
+      background: var(--text);
+      color: var(--bg);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      margin-left: 8px;
+      vertical-align: 2px;
     }
-    .check-icon svg {
-      width: 12px; height: 12px;
-      stroke: var(--green); fill: none;
-      stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
-    }
-    .highlight-row {
-      background: var(--green-light);
-      border: 1.5px solid var(--green);
-      border-radius: 10px;
-      padding: 12px 14px;
+    .highlight-row { border: 3px solid var(--line); background: var(--card); padding: 10px 12px; }
+
+    .email {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 44px;
+      border-bottom: 3px solid currentColor;
+      color: inherit;
+      text-decoration: none;
+      display: inline-block;
+      line-height: 1.15;
+      word-break: break-all;
     }
 
     @media (max-width: 900px) {
       body { padding: 24px 16px; gap: 24px; }
-      .slide { height: auto; min-height: 0; padding: 28px 22px 56px; }
-      .slide-header { margin-bottom: 24px; font-size: 11px; letter-spacing: 1.5px; }
-      .slide-number { right: 22px; bottom: 20px; }
-      .main-title { font-size: 44px; letter-spacing: -1px; }
+      .slide { height: auto; padding: 26px 20px 56px; }
+      .slide-header { margin-bottom: 24px; font-size: 10px; }
+      .wordmark { font-size: 20px; }
+      .slide-number { right: 20px; bottom: 20px; }
+      .main-title { font-size: 48px; }
       .subtitle { font-size: 17px; }
-      .pill { font-size: 17px; }
-      h2 { font-size: 28px; }
-      h2 .h2-light { display: block; margin: 4px 0 0; font-size: 18px; }
-      .info-grid, .info-grid.three-col, .two-col { grid-template-columns: 1fr; gap: 14px; }
+      h2 { font-size: 34px; }
+      h2 .h2-light { display: block; margin: 8px 0 0; }
+      .info-grid, .info-grid.three-col, .info-grid.four-col, .two-col { grid-template-columns: 1fr; gap: 14px; }
+      .numbered-list li { grid-template-columns: 44px 1fr; }
+      .email { font-size: 30px; }
       .title-body { padding: 40px 0; }
     }
 
     @media print {
       body { background: white; padding: 0; gap: 0; }
-      .slide { box-shadow: none; border-radius: 0; page-break-after: always; }
+      .slide { page-break-after: always; }
     }
   </style>
 </head>
 <body>
 
 <!-- ============ SLIDE 1: Title ============ -->
-<div class="slide">
+<div class="slide invert">
   <div class="slide-header">
-    <span>NOSO LABS</span>
-    <span>STUDENT PCB PROJECT</span>
+    <span class="wordmark">NOSO</span>
+    <span class="muted">Student PCB Project</span>
   </div>
   <div class="title-body" style="flex:1; display:flex; flex-direction:column; justify-content:center;">
-    <div class="main-title">Design Real<br>Hardware With Us</div>
+    <div class="main-title">Design real<br><em>hardware</em> with us.</div>
     <div class="subtitle">We're looking for students to help add cellular + SIM connectivity to our air quality sensor PCB.</div>
-    <div style="margin-top:28px;">
-      <span class="pill">Guaranteed internship</span>
+    <div style="margin-top:32px;">
+      <span class="tag">Guaranteed internship</span>
     </div>
   </div>
   <div class="slide-number">1</div>
@@ -255,23 +274,23 @@
 <!-- ============ SLIDE 2: The Project ============ -->
 <div class="slide">
   <div class="slide-header">
-    <span>NOSO LABS</span>
-    <span>STUDENT PCB PROJECT</span>
+    <span class="wordmark">NOSO</span>
+    <span class="muted">Student PCB Project</span>
   </div>
-  <h2>The Project <span class="h2-light">Cellular + SIM redesign</span></h2>
+  <h2>The project <span class="h2-light">Cellular + SIM redesign</span></h2>
   <div class="lede">Our sensor board is a compact KiCad design built around an ESP32-H2. Today it needs a nearby gateway to reach the Internet. We want it to connect straight to a carrier network, so it works anywhere.</div>
   <div class="info-grid three-col">
-    <div class="info-card">
+    <div class="info-card periwinkle">
       <div class="card-label">Today</div>
       <div class="card-title">Thread / BLE</div>
       <div class="card-desc">Measures VOCs, temperature and humidity. Powered over USB-C. Needs an external gateway to get online.</div>
     </div>
-    <div class="info-card">
+    <div class="info-card lavender">
       <div class="card-label">Goal</div>
       <div class="card-title">LTE-M over SIM</div>
       <div class="card-desc">Add a cellular modem (the Quectel BG95 family is one candidate), a SIM, and an antenna. The data path becomes SIM → carrier → Internet.</div>
     </div>
-    <div class="info-card">
+    <div class="info-card mint">
       <div class="card-label">Outcome</div>
       <div class="card-title">A shipped board</div>
       <div class="card-desc">You take a real design from schematic to a board we fabricate, bring up and use.</div>
@@ -285,32 +304,17 @@
 <!-- ============ SLIDE 3: What You'd Work On ============ -->
 <div class="slide">
   <div class="slide-header">
-    <span>NOSO LABS</span>
-    <span>STUDENT PCB PROJECT</span>
+    <span class="wordmark">NOSO</span>
+    <span class="muted">Student PCB Project</span>
   </div>
-  <h2>What You'd Work On</h2>
-  <div style="height:16px;"></div>
+  <h2>What you'd work on</h2>
+  <div style="height:14px;"></div>
   <ol class="numbered-list">
-    <li>
-      <span class="n">1</span>
-      <div><strong>Modem integration</strong><span class="d">Keep the ESP32-H2 as the sensor controller and connect an LTE-M modem over UART, with enable/reset lines. Check I/O voltages and add level shifting where needed.</span></div>
-    </li>
-    <li>
-      <span class="n">2</span>
-      <div><strong>SIM + antenna</strong><span class="d">Add a SIM (or eSIM) holder, a cellular antenna and its matching/feed, and ESD protection.</span></div>
-    </li>
-    <li>
-      <span class="n">3</span>
-      <div><strong>Power design</strong><span class="d">Add a dedicated modem rail (around 3.8 V, with transmit peaks near 1 A) and make sure the USB-C input budget holds up.</span></div>
-    </li>
-    <li>
-      <span class="n">4</span>
-      <div><strong>Layout + review</strong><span class="d">Place and route the new parts in KiCad, run DRC, and get the board ready for fabrication.</span></div>
-    </li>
-    <li>
-      <span class="n">5</span>
-      <div><strong>Bring-up</strong> <span class="d">Help test the first boards: power, SIM detection, network attach.</span></div>
-    </li>
+    <li><span class="n">01</span><div><strong>Modem integration</strong><span class="d">Keep the ESP32-H2 as the sensor controller and connect an LTE-M modem over UART, with enable/reset lines. Check I/O voltages and add level shifting where needed.</span></div></li>
+    <li><span class="n">02</span><div><strong>SIM + antenna</strong><span class="d">Add a SIM (or eSIM) holder, a cellular antenna and its matching/feed, and ESD protection.</span></div></li>
+    <li><span class="n">03</span><div><strong>Power design</strong><span class="d">Add a dedicated modem rail (around 3.8 V, with transmit peaks near 1 A) and make sure the USB-C input budget holds up.</span></div></li>
+    <li><span class="n">04</span><div><strong>Layout + review</strong><span class="d">Place and route the new parts in KiCad, run DRC, and get the board ready for fabrication.</span></div></li>
+    <li><span class="n">05</span><div><strong>Bring-up</strong><span class="d">Help test the first boards: power, SIM detection, network attach.</span></div></li>
   </ol>
   <div class="slide-number">3</div>
 </div>
@@ -318,28 +322,29 @@
 <!-- ============ SLIDE 4: Who + What You Get ============ -->
 <div class="slide">
   <div class="slide-header">
-    <span>NOSO LABS</span>
-    <span>STUDENT PCB PROJECT</span>
+    <span class="wordmark">NOSO</span>
+    <span class="muted">Student PCB Project</span>
   </div>
-  <h2>Who We're Looking For</h2>
-  <div style="height:16px;"></div>
+  <h2>Who we're looking for</h2>
+  <div style="height:14px;"></div>
   <div class="two-col">
     <div class="col-section">
       <h3>You</h3>
       <ul class="checklist">
-        <li><span class="check-icon"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></span><div><strong>EE, ECE or CompE student</strong><br><span class="d">Or anyone who has designed and built a board</span></div></li>
-        <li><span class="check-icon"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></span><div><strong>Some PCB design experience</strong><br><span class="d">KiCad preferred; Altium or Eagle is fine</span></div></li>
-        <li><span class="check-icon"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></span><div><strong>Comfortable with datasheets</strong><br><span class="d">Pinouts, power requirements, reference designs</span></div></li>
-        <li><span class="check-icon"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></span><div><strong>Bonus</strong><br><span class="d">RF or antenna layout, power electronics, embedded C</span></div></li>
+        <li><span class="mark">→</span><div><strong>GPA of 3.7 or higher</strong><span class="req">Required</span><br><span class="d">Include your transcript when you apply</span></div></li>
+        <li><span class="mark">→</span><div><strong>EE, ECE or CompE student</strong><br><span class="d">Or anyone who has designed and built a board</span></div></li>
+        <li><span class="mark">→</span><div><strong>Some PCB design experience</strong><br><span class="d">KiCad preferred; Altium or Eagle is fine</span></div></li>
+        <li><span class="mark">→</span><div><strong>Comfortable with datasheets</strong><br><span class="d">Pinouts, power requirements, reference designs</span></div></li>
+        <li><span class="mark">→</span><div><strong>Bonus</strong><br><span class="d">RF or antenna layout, power electronics, embedded C</span></div></li>
       </ul>
     </div>
-    <div class="col-section">
-      <h3>What You Get</h3>
+    <div class="col-section mint">
+      <h3>What you get</h3>
       <ul class="checklist">
-        <li class="highlight-row"><span class="check-icon" style="background:var(--card);"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></span><div><strong>A guaranteed internship</strong><br><span class="d">Work on this project with us and you have an internship</span></div></li>
-        <li><span class="check-icon"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></span><div><strong>Real hardware experience</strong><br><span class="d">A board that gets fabricated and used, not a class project</span></div></li>
-        <li><span class="check-icon"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></span><div><strong>Direct mentorship</strong><br><span class="d">Work alongside our team on design reviews</span></div></li>
-        <li><span class="check-icon"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></span><div><strong>A portfolio piece</strong><br><span class="d">Something concrete to show at every interview after this</span></div></li>
+        <li class="highlight-row"><span class="mark">★</span><div><strong>A guaranteed internship</strong><br><span class="d">Work on this project with us and you have an internship</span></div></li>
+        <li><span class="mark">→</span><div><strong>Real hardware experience</strong><br><span class="d">A board that gets fabricated and used, not a class project</span></div></li>
+        <li><span class="mark">→</span><div><strong>Direct mentorship</strong><br><span class="d">Work alongside our team on design reviews</span></div></li>
+        <li><span class="mark">→</span><div><strong>A portfolio piece</strong><br><span class="d">Something concrete to show at every interview after this</span></div></li>
       </ul>
     </div>
   </div>
@@ -347,29 +352,34 @@
 </div>
 
 <!-- ============ SLIDE 5: How to Apply ============ -->
-<div class="slide">
+<div class="slide invert">
   <div class="slide-header">
-    <span>NOSO LABS</span>
-    <span>STUDENT PCB PROJECT</span>
+    <span class="wordmark">NOSO</span>
+    <span class="muted">Student PCB Project</span>
   </div>
   <div class="title-body" style="flex:1; display:flex; flex-direction:column; justify-content:center;">
-    <div class="main-title" style="font-size:64px;">Interested?</div>
-    <div class="subtitle" style="margin-bottom:32px;">Send us a short email. We'll set up a quick call.</div>
-    <div class="info-grid three-col">
+    <div class="main-title" style="font-size:72px;">Interested?</div>
+    <div style="margin-bottom:32px;"><a class="email" href="mailto:career@noso.so">career@noso.so</a></div>
+    <div class="info-grid four-col">
       <div class="info-card">
-        <div class="card-label">Step 1</div>
+        <div class="card-label">Include</div>
         <div class="card-title">Your resume</div>
-        <div class="card-desc">Include your year and major.</div>
+        <div class="card-desc">With your year and major.</div>
       </div>
       <div class="info-card">
-        <div class="card-label">Step 2</div>
+        <div class="card-label">Include</div>
+        <div class="card-title">Your transcript</div>
+        <div class="card-desc">Required. GPA must be 3.7 or higher.</div>
+      </div>
+      <div class="info-card">
+        <div class="card-label">Include</div>
         <div class="card-title">A board you've made</div>
         <div class="card-desc">Photos, a GitHub link or design files. Class projects count.</div>
       </div>
       <div class="info-card">
-        <div class="card-label">Step 3</div>
-        <div class="card-title">Email us</div>
-        <div class="card-desc">{{CONTACT_EMAIL}}</div>
+        <div class="card-label">Then</div>
+        <div class="card-title">A quick call</div>
+        <div class="card-desc">We'll reply to set up a short chat.</div>
       </div>
     </div>
   </div>
