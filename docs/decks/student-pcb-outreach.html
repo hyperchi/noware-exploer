@@ -236,16 +236,26 @@
     .statement em { font-style: italic; }
     .stack { margin-top: 36px; padding-top: 18px; border-top: 3px solid var(--line); font-size: 13px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-secondary); }
 
-    .apply { display: grid; grid-template-columns: 3fr auto 1fr; gap: 16px; align-items: stretch; }
-    .apply > .arrow { align-self: center; }
-    .include-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-    .include-list > div + div { border-left: 1px solid var(--divider); padding-left: 20px; }
+    .apply { display: grid; grid-template-columns: 1fr 48px 260px; align-items: stretch; }
+    .apply-panel { border: 2px solid currentColor; padding: 24px 28px; display: flex; flex-direction: column; min-height: 168px; }
+    .apply-panel.solid { background: var(--invert-text); color: var(--invert-bg); border-color: var(--invert-text); }
+    .apply-label { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.55; margin-bottom: 18px; }
+    .apply-arrow { align-self: center; text-align: center; font-size: 24px; opacity: 0.6; }
+    .include-list { display: grid; grid-template-columns: repeat(3, 1fr); flex: 1; }
+    .include-list > div { display: flex; flex-direction: column; }
+    .include-list > div + div { border-left: 1px solid var(--invert-muted); padding-left: 24px; }
+    .i-num { font-family: 'DM Serif Display', Georgia, serif; font-size: 26px; line-height: 1; margin-bottom: auto; padding-bottom: 14px; }
+    .i-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .i-desc { font-size: 14px; opacity: 0.6; }
 
     @media (max-width: 900px) {
       .apply, .include-list { grid-template-columns: 1fr; }
-      .apply > .arrow { transform: rotate(90deg); }
-      .include-list > div + div { border-left: 0; padding-left: 0; }
-      .include-list > div + div { border-top: 1px solid var(--divider); padding-top: 14px; }
+      .apply { gap: 12px; }
+      .apply-arrow { transform: rotate(90deg); }
+      .apply-panel { min-height: 0; }
+      .i-num { margin-bottom: 0; padding-bottom: 8px; }
+      .include-list { gap: 14px; }
+      .include-list > div + div { border-left: 0; padding-left: 0; border-top: 1px solid var(--invert-muted); padding-top: 14px; }
       .statement { font-size: 30px; }
       .stack { letter-spacing: 0.12em; line-height: 1.8; }
       body { padding: 24px 16px; gap: 24px; }
@@ -361,19 +371,19 @@
     <div class="main-title" style="font-size:72px;">Interested?</div>
     <div style="margin-bottom:32px;"><a class="email" href="mailto:career@noso.so">career@noso.so</a></div>
     <div class="apply">
-      <div class="info-card">
-        <div class="card-label">Include in your email</div>
+      <div class="apply-panel">
+        <div class="apply-label">Include in your email</div>
         <div class="include-list">
-          <div><div class="card-title">Your resume</div><div class="card-desc">With your year and major.</div></div>
-          <div><div class="card-title">Your transcript</div><div class="card-desc">Required. GPA must be 3.7 or higher.</div></div>
-          <div><div class="card-title">A board you've made</div><div class="card-desc">Photos, a GitHub link or design files. Class projects count.</div></div>
+          <div><span class="i-num">01</span><div class="i-title">Resume</div><div class="i-desc">Year and major</div></div>
+          <div><span class="i-num">02</span><div class="i-title">Transcript</div><div class="i-desc">GPA of 3.7 or higher</div></div>
+          <div><span class="i-num">03</span><div class="i-title">A board you've made</div><div class="i-desc">Photos or design files</div></div>
         </div>
       </div>
-      <div class="arrow">→</div>
-      <div class="info-card mint">
-        <div class="card-label">Then</div>
-        <div class="card-title">A quick chat</div>
-        <div class="card-desc">We'll reply to find a time.</div>
+      <div class="apply-arrow">→</div>
+      <div class="apply-panel solid">
+        <div class="apply-label">Then</div>
+        <div class="i-title" style="margin-top:auto;">A quick chat</div>
+        <div class="i-desc">We'll reply to find a time</div>
       </div>
     </div>
   </div>
