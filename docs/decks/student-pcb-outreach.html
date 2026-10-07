@@ -231,7 +231,43 @@
       word-break: break-all;
     }
 
+    .flows { display: flex; flex-direction: column; gap: 16px; }
+    .flow {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      align-items: center;
+      border: 3px solid var(--line);
+      padding: 20px 24px;
+    }
+    .flow.periwinkle { background: var(--periwinkle); }
+    .flow.mint { background: var(--mint); }
+    .flow-label { font-family: 'DM Serif Display', Georgia, serif; font-size: 30px; }
+    .flow-path { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 14px; }
+    .node { background: var(--card); border: 3px solid var(--line); padding: 14px 18px; min-height: 76px; display: flex; flex-direction: column; justify-content: center; }
+    .node b { font-size: 17px; }
+    .node span { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .node.dashed { border-style: dashed; background: transparent; }
+    .node.strong { background: var(--text); color: var(--bg); }
+    .node.strong span { color: var(--bg); opacity: 0.7; }
+    .arrow { font-size: 26px; font-weight: 700; text-align: center; }
+    .facts { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: auto; margin-bottom: 28px; border-top: 3px solid var(--line); }
+    .facts > div { padding: 16px 20px 0 0; }
+    .facts > div + div { padding-left: 20px; border-left: 1px solid var(--divider); }
+    .facts .card-label { margin-bottom: 6px; }
+    .fact { font-size: 17px; font-weight: 700; }
+
+    .apply { display: grid; grid-template-columns: 3fr auto 1fr; gap: 16px; align-items: stretch; }
+    .apply > .arrow { align-self: center; }
+    .include-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .include-list > div + div { border-left: 1px solid var(--divider); padding-left: 20px; }
+
     @media (max-width: 900px) {
+      .flow { grid-template-columns: 1fr; gap: 12px; padding: 16px; }
+      .flow-path, .facts, .apply, .include-list { grid-template-columns: 1fr; }
+      .flow-path .arrow, .apply > .arrow { transform: rotate(90deg); }
+      .facts > div + div, .include-list > div + div { border-left: 0; padding-left: 0; }
+      .include-list > div + div { border-top: 1px solid var(--divider); padding-top: 14px; }
+      .facts { margin-bottom: 0; }
       body { padding: 24px 16px; gap: 24px; }
       .slide { height: auto; padding: 26px 20px 56px; }
       .slide-header { margin-bottom: 24px; font-size: 10px; }
@@ -278,26 +314,34 @@
     <span class="muted">Student PCB Project</span>
   </div>
   <h2>The project <span class="h2-light">Cellular + SIM redesign</span></h2>
-  <div class="lede">Our sensor board is a compact KiCad design built around an ESP32-H2. Today it needs a nearby gateway to reach the Internet. We want it to connect straight to a carrier network, so it works anywhere.</div>
-  <div class="info-grid three-col">
-    <div class="info-card periwinkle">
-      <div class="card-label">Today</div>
-      <div class="card-title">Thread / BLE</div>
-      <div class="card-desc">Measures VOCs, temperature and humidity. Powered over USB-C. Needs an external gateway to get online.</div>
+  <div class="lede">Our air quality sensor board measures VOCs, temperature and humidity. We want it online anywhere, without a gateway.</div>
+  <div class="flows">
+    <div class="flow periwinkle">
+      <div class="flow-label">Today</div>
+      <div class="flow-path">
+        <div class="node"><b>Sensor board</b><span>ESP32-H2 · Thread / BLE</span></div>
+        <div class="arrow">→</div>
+        <div class="node dashed"><b>Gateway</b><span>Must be nearby</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>Internet</b></div>
+      </div>
     </div>
-    <div class="info-card lavender">
-      <div class="card-label">Goal</div>
-      <div class="card-title">LTE-M over SIM</div>
-      <div class="card-desc">Add a cellular modem (the Quectel BG95 family is one candidate), a SIM, and an antenna. The data path becomes SIM → carrier → Internet.</div>
-    </div>
-    <div class="info-card mint">
-      <div class="card-label">Outcome</div>
-      <div class="card-title">A shipped board</div>
-      <div class="card-desc">You take a real design from schematic to a board we fabricate, bring up and use.</div>
+    <div class="flow mint">
+      <div class="flow-label">Goal</div>
+      <div class="flow-path">
+        <div class="node strong"><b>Sensor board</b><span>ESP32-H2 + LTE-M modem</span></div>
+        <div class="arrow">→</div>
+        <div class="node strong"><b>SIM + carrier</b><span>Any cell coverage</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>Internet</b></div>
+      </div>
     </div>
   </div>
-  <div style="height:20px;"></div>
-  <div class="callout"><strong>Where you start:</strong> the existing KiCad files and our browser-based board explorer, so you can inspect every part, pad and net before you change anything.</div>
+  <div class="facts">
+    <div><div class="card-label">You start with</div><div class="fact">Our KiCad files + a board explorer</div></div>
+    <div><div class="card-label">Modem candidate</div><div class="fact">Quectel BG95 (LTE-M)</div></div>
+    <div><div class="card-label">You end with</div><div class="fact">A board we fabricate and use</div></div>
+  </div>
   <div class="slide-number">2</div>
 </div>
 
@@ -360,26 +404,20 @@
   <div class="title-body" style="flex:1; display:flex; flex-direction:column; justify-content:center;">
     <div class="main-title" style="font-size:72px;">Interested?</div>
     <div style="margin-bottom:32px;"><a class="email" href="mailto:career@noso.so">career@noso.so</a></div>
-    <div class="info-grid four-col">
+    <div class="apply">
       <div class="info-card">
-        <div class="card-label">Include</div>
-        <div class="card-title">Your resume</div>
-        <div class="card-desc">With your year and major.</div>
+        <div class="card-label">Include in your email</div>
+        <div class="include-list">
+          <div><div class="card-title">Your resume</div><div class="card-desc">With your year and major.</div></div>
+          <div><div class="card-title">Your transcript</div><div class="card-desc">Required. GPA must be 3.7 or higher.</div></div>
+          <div><div class="card-title">A board you've made</div><div class="card-desc">Photos, a GitHub link or design files. Class projects count.</div></div>
+        </div>
       </div>
-      <div class="info-card">
-        <div class="card-label">Include</div>
-        <div class="card-title">Your transcript</div>
-        <div class="card-desc">Required. GPA must be 3.7 or higher.</div>
-      </div>
-      <div class="info-card">
-        <div class="card-label">Include</div>
-        <div class="card-title">A board you've made</div>
-        <div class="card-desc">Photos, a GitHub link or design files. Class projects count.</div>
-      </div>
-      <div class="info-card">
+      <div class="arrow">→</div>
+      <div class="info-card mint">
         <div class="card-label">Then</div>
-        <div class="card-title">A quick call</div>
-        <div class="card-desc">We'll reply to set up a short chat.</div>
+        <div class="card-title">A quick chat</div>
+        <div class="card-desc">We'll reply to find a time.</div>
       </div>
     </div>
   </div>
