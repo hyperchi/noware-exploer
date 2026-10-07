@@ -231,30 +231,10 @@
       word-break: break-all;
     }
 
-    .flows { display: flex; flex-direction: column; gap: 16px; }
-    .flow {
-      display: grid;
-      grid-template-columns: 110px 1fr;
-      align-items: center;
-      border: 3px solid var(--line);
-      padding: 20px 24px;
-    }
-    .flow.periwinkle { background: var(--periwinkle); }
-    .flow.mint { background: var(--mint); }
-    .flow-label { font-family: 'DM Serif Display', Georgia, serif; font-size: 30px; }
-    .flow-path { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 14px; }
-    .node { background: var(--card); border: 3px solid var(--line); padding: 14px 18px; min-height: 76px; display: flex; flex-direction: column; justify-content: center; }
-    .node b { font-size: 17px; }
-    .node span { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
-    .node.dashed { border-style: dashed; background: transparent; }
-    .node.strong { background: var(--text); color: var(--bg); }
-    .node.strong span { color: var(--bg); opacity: 0.7; }
-    .arrow { font-size: 26px; font-weight: 700; text-align: center; }
-    .facts { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: auto; margin-bottom: 28px; border-top: 3px solid var(--line); }
-    .facts > div { padding: 16px 20px 0 0; }
-    .facts > div + div { padding-left: 20px; border-left: 1px solid var(--divider); }
-    .facts .card-label { margin-bottom: 6px; }
-    .fact { font-size: 17px; font-weight: 700; }
+    .statement { font-family: 'DM Serif Display', Georgia, serif; font-size: 42px; line-height: 1.2; letter-spacing: -0.02em; }
+    .statement .muted-line { display: block; color: var(--text-secondary); margin-bottom: 10px; }
+    .statement em { font-style: italic; }
+    .stack { margin-top: 36px; padding-top: 18px; border-top: 3px solid var(--line); font-size: 13px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-secondary); }
 
     .apply { display: grid; grid-template-columns: 3fr auto 1fr; gap: 16px; align-items: stretch; }
     .apply > .arrow { align-self: center; }
@@ -262,12 +242,12 @@
     .include-list > div + div { border-left: 1px solid var(--divider); padding-left: 20px; }
 
     @media (max-width: 900px) {
-      .flow { grid-template-columns: 1fr; gap: 12px; padding: 16px; }
-      .flow-path, .facts, .apply, .include-list { grid-template-columns: 1fr; }
-      .flow-path .arrow, .apply > .arrow { transform: rotate(90deg); }
-      .facts > div + div, .include-list > div + div { border-left: 0; padding-left: 0; }
+      .apply, .include-list { grid-template-columns: 1fr; }
+      .apply > .arrow { transform: rotate(90deg); }
+      .include-list > div + div { border-left: 0; padding-left: 0; }
       .include-list > div + div { border-top: 1px solid var(--divider); padding-top: 14px; }
-      .facts { margin-bottom: 0; }
+      .statement { font-size: 30px; }
+      .stack { letter-spacing: 0.12em; line-height: 1.8; }
       body { padding: 24px 16px; gap: 24px; }
       .slide { height: auto; padding: 26px 20px 56px; }
       .slide-header { margin-bottom: 24px; font-size: 10px; }
@@ -313,34 +293,10 @@
     <span class="wordmark">NOSO</span>
     <span class="muted">Student PCB Project</span>
   </div>
-  <h2>The project <span class="h2-light">Cellular + SIM redesign</span></h2>
-  <div class="lede">Our air quality sensor board measures VOCs, temperature and humidity. We want it online anywhere, without a gateway.</div>
-  <div class="flows">
-    <div class="flow periwinkle">
-      <div class="flow-label">Today</div>
-      <div class="flow-path">
-        <div class="node"><b>Sensor board</b><span>ESP32-H2 · Thread / BLE</span></div>
-        <div class="arrow">→</div>
-        <div class="node dashed"><b>Gateway</b><span>Must be nearby</span></div>
-        <div class="arrow">→</div>
-        <div class="node"><b>Internet</b></div>
-      </div>
-    </div>
-    <div class="flow mint">
-      <div class="flow-label">Goal</div>
-      <div class="flow-path">
-        <div class="node strong"><b>Sensor board</b><span>ESP32-H2 + LTE-M modem</span></div>
-        <div class="arrow">→</div>
-        <div class="node strong"><b>SIM + carrier</b><span>Any cell coverage</span></div>
-        <div class="arrow">→</div>
-        <div class="node"><b>Internet</b></div>
-      </div>
-    </div>
-  </div>
-  <div class="facts">
-    <div><div class="card-label">You start with</div><div class="fact">Our KiCad files + a board explorer</div></div>
-    <div><div class="card-label">Modem candidate</div><div class="fact">Quectel BG95 (LTE-M)</div></div>
-    <div><div class="card-label">You end with</div><div class="fact">A board we fabricate and use</div></div>
+  <h2>The project</h2>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+    <div class="statement"><span class="muted-line">Our air sensor needs a gateway to get online.</span>We want to give it a <em>SIM card</em> so it works anywhere.</div>
+    <div class="stack">ESP32-H2 &nbsp;·&nbsp; KiCad &nbsp;·&nbsp; LTE-M modem &nbsp;·&nbsp; SIM + antenna</div>
   </div>
   <div class="slide-number">2</div>
 </div>
