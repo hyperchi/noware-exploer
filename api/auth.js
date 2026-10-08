@@ -67,7 +67,12 @@ export default async function handler(req, res) {
       if (!lookup.ok) throw new Error('Token rejected');
       const info = await lookup.json();
       if (info.aud !== process.env.GOOGLE_CLIENT_ID || !(Number(info.expires_in) > 0)) throw new Error('Wrong audience');
-      const identity = {email: info.email, sub: info.sub, email_verified: info.email_verified === true || info.email_verified === 'true', hd: info.hd};
+      // tokeninfo omits the Workspace domain for access tokens; userinfo carries hd.
+      const profileLookup = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {headers: {Authorization: 'Bearer ' + accessToken}});
+      if (!profileLookup.ok) throw new Error('Profile rejected');
+      const profile = await profileLookup.json();
+      if (profile.sub !== info.sub) throw new Error('Profile mismatch');
+      const identity = {email: profile.email, sub: profile.sub, email_verified: profile.email_verified === true || profile.email_verified === 'true', hd: profile.hd};
       if (!isNosoIdentity(identity)) return res.status(403).json({error:'Please use a Noso account or an approved guest Google account.'});
       const token = await createSession({email:identity.email,sub:identity.sub}, config);
       res.setHeader('Set-Cookie', [sessionCookie(token), clearNonce]);
