@@ -54,3 +54,6 @@ async function showLibrary(ref){const button=$('#open-library');button.disabled=
 $('#open-library').onclick=()=>showLibrary(selected?.ref);
 
 mountShowcase();
+// Signed-in page: the workspace is always present and open below the showcase,
+// and the public Login link gives way to the Sign out button in the workspace nav.
+{const pg=document.querySelector('#playground');if(pg){pg.hidden=false;pg.open=true;}document.querySelector('header .hardware-login')?.remove();}
