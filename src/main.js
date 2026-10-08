@@ -38,7 +38,7 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape'&&selected&&!document.q
 $('#export').onclick=()=>{const blob=new Blob([JSON.stringify({schema:1,sourceCommit:board.commit,inputs:state,result:simulate(state),selectedComponent:selected?.ref,selectedNet:board.nets[net],simulation:'Behavioral target LED preview; not an electrical solver'},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='noware-scenario.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 list();inspect();update();
 
-$('#signout').onclick=async()=>{const r=await fetch('/api/auth?action=logout',{method:'POST'});if(r.ok)location.replace('/login');else alert('Sign-out failed. Please try again.')};
+$('#signout').onclick=async()=>{const r=await fetch('/api/auth?action=logout',{method:'POST'});if(r.ok)location.replace('/');else alert('Sign-out failed. Please try again.')};
 
 function showDesignOnBoard(kind){
  designKind=kind;
