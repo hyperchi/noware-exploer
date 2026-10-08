@@ -58,3 +58,5 @@ The final editorial pass unifies the header, hero, controls, and footer; adds th
 ## Noso family styling
 
 Reviewed https://noso.so/ in a browser at desktop and mobile sizes on October 8, 2026. Adopted its white/graphite/gray palette, Inter 600 heading weight, monospace labels, subtle 64 px grid, and restrained #2563eb accent. The dark origin section echoes its contrasting editorial sections. NOWARE retains its own copy, geometry, rounded interaction controls, persistent airflow, small Login link, and Made in America presentation. No Noso imagery, tracking code, product claims, or layout components were imported.
+
+Public-page cleanup: engineering entry points, source download links, and Product notes are removed from the landing page. Preserved tools are accessible at `/?view=playground` behind the unchanged server authentication. Asset provenance remains in `public/showcase/README.md`. The small Login link remains at the top right.
