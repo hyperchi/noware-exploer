@@ -54,7 +54,7 @@ heights are visual approximations, not fabrication references. USB shell details
 retain simplified material groups. S3 actuator, individual mounting screws,
 solder fillets, silkscreen printing, and underside copper are not reproduced.
 
-Airflow follows three exterior paths that stop outside the sensing-side corner;
+Airflow follows seven exterior paths around the front and sides, with two approaching the sensing-side corner;
 no internal fluid path is claimed. In exploded mode, the paths rise with the PCB.
 Particles represent ambient air, not dust counts, CO₂ molecules, air cleaning,
 forced ventilation, or measured velocity. Color controls are explicitly a demo,

@@ -15,10 +15,10 @@ It does not modify the public login page or deploy to noware.so.
   scroll/manual ownership. Manual chapter/explode choices persist until Resume
   scroll story. Air-quality choices never change automatically.
 - `src/showcase/config.js`: colors, camera, exploded offsets, chapter copy,
-  component explanations, quality and particle settings.
+  component labels, quality and particle settings.
 - `src/showcase/scene.js`: lighting, materials, asset loading, picking, limited
   drag rotation, camera framing, render lifecycle and projected leaders.
-- `src/showcase/airflow.js`: three exterior streamlines and one batched point mesh.
+- `src/showcase/airflow.js`: seven soft animated streamlines and one batched point mesh.
 - `src/showcase/showcase.css`: editorial layout, responsive styles, controls.
 - `public/showcase/`: GLB, immediate rendered poster, extracted PCB, license and
   detailed provenance/approximation notes. Conversion scripts in `scripts/showcase/`.
@@ -48,3 +48,5 @@ and illustrative materials/package heights. Optical scattering and airflow are
 presentation approximations. No physical iPhone/Android GPU testing performed.
 Three.js's shared bundle exceeds Vite's 500 kB advisory; it is dynamically loaded.
 The separate authenticated live dashboard and production deployment are unchanged.
+
+The PCB list and engineering tools are now collapsed by default under Hardware playground. The hero CTA opens them on demand. Component selection highlights the model without a persistent explanatory text row.

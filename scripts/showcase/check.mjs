@@ -3,7 +3,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true});const erro
 await page.goto(url);await page.waitForSelector('.hardware-ready');await page.waitForTimeout(1000);
 const canvas=page.locator('.hardware-canvas');const snap=async name=>page.screenshot({path:`captures/${name}.png`});
 await snap('desktop-assembled');await page.locator('[data-action=explode]').click();await expect(canvas).toHaveAttribute('data-explode','1.00',{timeout:10000});await snap('desktop-exploded');
-await page.locator('.hardware-part-buttons [data-part=U2]').click();await expect(page.locator('.hardware-part-copy')).toContainText('not a direct CO₂');
+await page.locator('[data-anchor=U2]').click();await expect(page.locator('.hardware-story')).toHaveAttribute('data-selected','U2');await expect(page.locator('#playground')).not.toHaveAttribute('open','');
 await page.locator('[data-action=airflow]').click();await expect(canvas).toHaveAttribute('data-flow','true');await snap('desktop-airflow');
 await page.locator('[data-action=explode]').click();await expect(canvas).toHaveAttribute('data-explode','0.00',{timeout:10000});
 for(const state of ['good','attention','poor']){await page.locator(`button[data-air=${state}]`).click();await page.waitForTimeout(1000);await expect(canvas).toHaveAttribute('data-air',state);await snap('desktop-'+state);}
