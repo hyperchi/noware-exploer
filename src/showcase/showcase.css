@@ -153,3 +153,8 @@
  .hardware-sticky { position: relative; }
  .hardware-poster, .hardware-air button, .hardware-cta { transition: none; }
 }
+.noware-home header .hardware-login { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: #7c8672; font-size: 11px; letter-spacing: .15px; }
+.noware-home header .hardware-login:hover { color: #34452a; }
+.hardware-login:focus-visible { outline: 2px solid #6a805b; outline-offset: 4px; }
+.hardware-workspace-nav { justify-content: flex-end; flex-wrap: wrap; padding: 15px 3%; border-bottom: 1px solid #dedfd6; }
+@media(max-width:700px) { .hardware-workspace-nav { gap: 12px; font-size: 8px; padding: 15px 22px; } }
