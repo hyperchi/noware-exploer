@@ -54,6 +54,28 @@ export default async function handler(req, res) {
       return res.status(401).json({error:'Sign-in could not be verified. Reload this page and try again.'});
     }
   }
+  // Popup sign-in from the public homepage: the browser opens Google's account
+  // chooser on the Login click and hands back an OAuth access token, which we
+  // verify with Google (audience must be our client) before applying the same
+  // identity policy as the credential flow.
+  if (action === 'token' && req.method === 'POST') {
+    if (!req.headers['content-type']?.startsWith('application/json')) return res.status(415).json({error:'JSON required.'});
+    try {
+      const accessToken = req.body?.accessToken;
+      if (typeof accessToken !== 'string' || accessToken.length < 20 || accessToken.length > 4096) throw new Error('Invalid token');
+      const lookup = await fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(accessToken));
+      if (!lookup.ok) throw new Error('Token rejected');
+      const info = await lookup.json();
+      if (info.aud !== process.env.GOOGLE_CLIENT_ID || !(Number(info.expires_in) > 0)) throw new Error('Wrong audience');
+      const identity = {email: info.email, sub: info.sub, email_verified: info.email_verified === true || info.email_verified === 'true', hd: info.hd};
+      if (!isNosoIdentity(identity)) return res.status(403).json({error:'Please use a Noso account or an approved guest Google account.'});
+      const token = await createSession({email:identity.email,sub:identity.sub}, config);
+      res.setHeader('Set-Cookie', [sessionCookie(token), clearNonce]);
+      return res.status(200).json({ok:true});
+    } catch {
+      return res.status(401).json({error:'Sign-in could not be verified. Please try again.'});
+    }
+  }
   res.setHeader('Allow', 'GET, POST');
   return res.status(405).json({error:'Method not allowed.'});
 }
