@@ -50,3 +50,5 @@ Three.js's shared bundle exceeds Vite's 500 kB advisory; it is dynamically loade
 The separate authenticated live dashboard and production deployment are unchanged.
 
 The PCB list and engineering tools are now collapsed by default under Hardware playground. The hero CTA opens them on demand. Component selection highlights the model without a persistent explanatory text row.
+
+Airflow is always visible in every chapter and manual assembly state. There is no on/off control. Reduced motion keeps the same trails visible but stationary. The fallback poster includes airflow.

@@ -1,8 +1,8 @@
 {
   "medianFrameMs": 16.699999809265137,
   "explode": "0.00",
-  "flow": "false",
+  "flow": "true",
   "air": "good",
-  "drawCalls": "81",
-  "triangles": "241894"
+  "drawCalls": "89",
+  "triangles": "248894"
 }
