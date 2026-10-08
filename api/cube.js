@@ -22,7 +22,7 @@ const finite = (v) => typeof v === 'number' && Number.isFinite(v);
 export function createCubeStore() {
   return {
     publisher: null, // {id, email, lastSeen}
-    meta: {name: 'noware', isPro: false, fwVersion: '', ledPercent: null},
+    meta: {name: 'Noware', isPro: false, fwVersion: '', ledPercent: null},
     live: [],
     slots: [],
     windowS: 300,

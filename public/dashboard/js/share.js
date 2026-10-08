@@ -112,7 +112,7 @@ export class RemoteDevice extends EventTarget {
     this.id = "shared";
     this.slot = -1;
     this.isRemote = true;
-    this.name = "noware";
+    this.name = "Noware";
     this.publisher = "";
     this.isPro = false;
     this.fwVersion = "";
@@ -149,7 +149,7 @@ export class RemoteDevice extends EventTarget {
   }
 
   get modelLabel() {
-    return this.isPro ? "noware Pro" : "noware Base";
+    return this.isPro ? "Noware Pro" : "Noware Base";
   }
 
   get lastUpdated() {
@@ -160,7 +160,7 @@ export class RemoteDevice extends EventTarget {
   apply(body, offset) {
     this.publisher = body.publisher;
     this.online = body.online;
-    this.name = body.meta.name || "noware";
+    this.name = body.meta.name || "Noware";
     this.isPro = body.meta.isPro;
     this.fwVersion = body.meta.fwVersion;
     this.ledPercent = body.meta.ledPercent;

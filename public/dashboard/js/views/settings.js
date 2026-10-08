@@ -124,7 +124,7 @@ export class SettingsView {
       h("h2.section-label", { text: "About" }),
       h(
         "div.card.settings-group",
-        row("noware dashboard", h("span.faint", { text: `v${APP_VERSION}` })),
+        row("Noware dashboard", h("span.faint", { text: `v${APP_VERSION}` })),
         row(
           "Based on",
           h("a", {

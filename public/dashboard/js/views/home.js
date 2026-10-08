@@ -26,7 +26,7 @@ class DeviceCard {
 
     this.dot = statusDot();
     this.name = h("span.device-name");
-    this.typePill = pill("noware");
+    this.typePill = pill("Noware");
     this.statusPill = pill("Waiting...");
 
     this.vocValue = h("div", { class: "value", text: "--" });
@@ -211,11 +211,11 @@ export class HomeView {
         "div.page-header",
         h("a.toolbtn", {
           href: "/",
-          title: "Back to noware explorer",
-          "aria-label": "Back to noware explorer",
+          title: "Back to Noware explorer",
+          "aria-label": "Back to Noware explorer",
           text: "\u2190",
         }),
-        h("h1.page-title", { text: "noware dashboard" }),
+        h("h1.page-title", { text: "Noware dashboard" }),
         h("div.spacer"),
         h("button.toolbtn", {
           type: "button",

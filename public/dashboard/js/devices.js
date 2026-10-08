@@ -77,7 +77,7 @@ export class Device extends EventTarget {
     this.port = port;
     this.link = new SerialLink(port);
 
-    this.name = loadNames()[slot] || (slot === 0 ? "noware" : `noware ${slot + 1}`);
+    this.name = loadNames()[slot] || (slot === 0 ? "Noware" : `Noware ${slot + 1}`);
     this.isPro = false;
     this.fwVersion = "";
     this.frcNeeded = false;
@@ -142,7 +142,7 @@ export class Device extends EventTarget {
   }
 
   get modelLabel() {
-    return this.isPro ? "noware Pro" : "noware Base";
+    return this.isPro ? "Noware Pro" : "Noware Base";
   }
 
   get lastUpdated() {
@@ -223,7 +223,7 @@ export class Device extends EventTarget {
    */
   async runCo2Frc() {
     if (!this.isPro) {
-      throw new Error("CO2 calibration is only available on noware Pro");
+      throw new Error("CO2 calibration is only available on Noware Pro");
     }
     if (!this.isConnected) {
       throw new Error("Cube is not connected");

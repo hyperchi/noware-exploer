@@ -90,8 +90,8 @@ export class DetailView {
 
   _build() {
     // --- header ---------------------------------------------------------
-    this.title = h("h1.detail-title", { text: "noware" });
-    this.typePill = pill("noware");
+    this.title = h("h1.detail-title", { text: "Noware" });
+    this.typePill = pill("Noware");
     this.connDot = statusDot();
     this.connLabel = h("span.faint");
     this.backBtn = h("button.toolbtn", {
