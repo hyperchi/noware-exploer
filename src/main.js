@@ -1,4 +1,5 @@
 import './style.css';
+import {mountShowcase} from './showcase/index.js';
 import {simulate} from './simulation.js';
 import {mountDesignLab} from './design-lab.js';
 import {designHighlights,highlightOverlay} from './design-highlights.js';
@@ -51,3 +52,5 @@ const designLab=mountDesignLab({board,onConnectionChange:showDesignOnBoard,selec
 
 async function showLibrary(ref){const button=$('#open-library');button.disabled=true;try{const {openComponentLibrary}=await import('./component-library.js');openComponentLibrary({board,initialRef:ref,onTryConnection:kind=>designLab.setConnection(kind),onLocate:ref=>{const c=parts.find(p=>p.ref===ref);if(c){side=c.layer==='B.Cu'?'B.Cu':'F.Cu';$('#front').classList.toggle('active',side==='F.Cu');$('#back').classList.toggle('active',side==='B.Cu');pan=[0,0];zoom=1;select(c);$('#pcb').scrollIntoView({behavior:'smooth',block:'center'})}}});}catch{alert('Component library could not load. Please refresh and try again.')}finally{button.disabled=false}}
 $('#open-library').onclick=()=>showLibrary(selected?.ref);
+
+mountShowcase();
