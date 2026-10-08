@@ -14,3 +14,13 @@
 .hardware-controls{justify-content:flex-start;gap:28px;padding:18px 0 18px 39%;align-items:center;border-top:0}.hardware-chapters{border-top:0}
 @media(max-width:1100px){.hardware-controls{padding-left:0;justify-content:center}}
 @media(max-width:700px){.hardware-controls{gap:18px;align-items:stretch}.hardware-assembly{justify-content:flex-start}.hardware-assembly button{flex:0 0 auto}}
+/* Quiet, tactile controls that share the product's softer finish. */
+.hardware-controls{align-items:flex-end;gap:24px;padding-top:16px;padding-bottom:22px}
+.hardware-assembly button,.hardware-assembly button[aria-pressed=true]{min-height:44px;min-width:172px;border:1px solid #cdd2c5;border-radius:6px;background:#f7f7f2;color:#47533e;padding:11px 15px;font-size:11px;box-shadow:0 1px 2px #25301d05}
+.hardware-assembly button:hover{background:#fffef8;border-color:#a4af98}.hardware-assembly button span{font-size:14px;color:#7b8770}
+.hardware-air{gap:9px}.hardware-air-heading{font-size:10px;font-weight:500;color:#64705b;gap:35px}.hardware-air .hardware-demo{font-size:7px;letter-spacing:1.1px;color:#909787}
+.hardware-air [role=group]{display:flex;gap:3px;padding:4px;background:#e6e9e0;border:1px solid #dce1d3;border-radius:8px}
+.hardware-air button{min-height:36px;border:0;border-radius:5px;background:transparent;padding:9px 14px;font-size:11px;color:#75806b;box-shadow:none}
+.hardware-air button:hover{background:#f2f4ed;color:#44543a}.hardware-air button[aria-pressed=true]{border:0;background:#fffef9;color:#3e5132;box-shadow:0 1px 4px #2c3d2414,inset 0 0 0 1px #ffffff80}
+.hardware-air i{width:7px;height:7px;margin-right:7px}.hardware-air .hardware-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media(max-width:700px){.hardware-controls{align-items:stretch;gap:18px}.hardware-air [role=group]{display:grid;grid-template-columns:1fr 1.5fr 1fr}.hardware-air button{min-height:40px;padding:10px 7px;font-size:10px}.hardware-air-heading{font-size:10px}.hardware-assembly button:first-child{min-width:172px}}
