@@ -3,4 +3,3 @@ Includes AirCube hardware design data and adapted firmware threshold calculation
 https://github.com/StuckAtPrototype/AirCube
 Explorer UI, KiCad extraction tooling, and browser simulation added in 2026.
 The /dashboard section is AirCube Web (web/ in StuckAtPrototype/AirCube, Apache License 2.0) at upstream commit 71554f0, with user-facing text rebranded to noware and a link back to the explorer. Firmware binaries in public/dashboard/firmware are unmodified AirCube release assets.
-The homepage 3D showcase (public/showcase/noware.glb) is built from the AirCube Pro enclosure STEP files and board layout (Apache License 2.0) with component CAD from Espressif (CC BY-SA 4.0 with KiCad exception), the KiCad packages3D library (CC BY-SA 4.0 with library exception) and E-Switch reference geometry; see public/showcase/README.md.

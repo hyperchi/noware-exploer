@@ -3,7 +3,7 @@ const fail = text => {message.textContent=text;document.querySelector('#retry').
 async function init() {
   try {
     const session = await fetch('/api/auth?action=session');
-    if(session.ok){location.replace('/explorer');return;}
+    if(session.ok){location.replace('/');return;}
     const response = await fetch('/api/auth?action=config');
     const config = await response.json();
     if(!response.ok)throw Error(config.error);
@@ -17,7 +17,7 @@ async function init() {
         const result=await fetch('/api/auth?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential})});
         const data=await result.json();
         if(!result.ok)throw Error(data.error);
-        location.replace('/explorer');
+        location.replace('/');
       }catch(e){fail(e.message||'Sign-in failed. Please try again.');}
     }});
     const container=document.querySelector('#google-button');

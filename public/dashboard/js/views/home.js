@@ -210,7 +210,7 @@ export class HomeView {
       h(
         "div.page-header",
         h("a.toolbtn", {
-          href: "/explorer",
+          href: "/",
           title: "Back to noware explorer",
           "aria-label": "Back to noware explorer",
           text: "\u2190",
