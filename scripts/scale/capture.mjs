@@ -5,7 +5,7 @@ fs.mkdirSync('captures/scale',{recursive:true});
 const errors=[],posters=[];
 for(const mobile of [false,true]){
  const page=await browser.newPage({viewport:mobile?{width:390,height:844}:{width:1440,height:900}});page.on('pageerror',e=>errors.push(e.message));
- await page.goto(url);await page.locator('#size').scrollIntoViewIfNeeded();await expect(page.locator('.scale-canvas')).toHaveAttribute('data-ready','true');
+ await page.goto(url);if(!await page.locator('#size').isVisible())await page.locator('.hardware-size-link').click();await page.locator('#size').scrollIntoViewIfNeeded();await expect(page.locator('.scale-canvas')).toHaveAttribute('data-ready','true');
  if(!mobile){await page.waitForTimeout(600);await page.locator('#size').screenshot({path:'captures/scale/reveal-middle.png'})}
  await expect(page.locator('.scale-canvas')).toHaveAttribute('data-reveal','1.000');
  for(const mode of ['compare','footprint']){

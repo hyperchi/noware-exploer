@@ -3,3 +3,14 @@
 .scale-stage{position:relative;height:440px;max-width:1150px;margin:0 auto}.scale-canvas,.scale-stage picture{position:absolute;inset:0}.scale-canvas canvas{display:block;width:100%;height:100%;touch-action:pan-y}.scale-poster{width:100%;height:100%;object-fit:contain}.scale-stage.is-ready picture{visibility:hidden}.scale-measure{position:absolute;pointer-events:none;transform:translate(-50%,-50%);font:11px ui-monospace,SFMono-Regular,Menlo,monospace;color:#666;white-space:nowrap}.scale-coin-label{font-size:10px}
 .scale-toolbar{display:flex;align-items:center;justify-content:center;gap:28px;margin:0 auto 28px}.scale-story button{font:inherit;font-size:12px;cursor:pointer;min-height:44px;background:none;border:0;color:#737373;padding:10px 18px}.scale-modes{display:flex;border-bottom:1px solid #e5e5e5}.scale-modes button{border-bottom:2px solid transparent;margin-bottom:-1px}.scale-modes button[aria-pressed=true]{color:#171717;border-bottom-color:#171717}.scale-story button:hover{color:#171717}.scale-story button:focus-visible,.scale-story summary:focus-visible{outline:2px solid #2563eb;outline-offset:4px}.scale-replay span{margin-left:8px;font-size:16px}.scale-caption{text-align:center;font-size:11px;color:#737373;line-height:1.7}.scale-caption>p{margin:5px 0}.scale-caption>p:first-child{color:#404040;font-size:12px}.scale-caption>p span{color:#a3a3a3}.scale-caption details{max-width:500px;margin:12px auto 0;font-size:10px}.scale-caption summary{cursor:pointer;list-style:none;text-decoration:underline;text-underline-offset:3px}.scale-caption details p{margin:12px 0}.scale-status:empty{display:none}
 @media(max-width:600px){.scale-story{padding:52px 16px 32px}.scale-heading h2{letter-spacing:-1.5px;font-size:35px}.scale-heading>p{font-size:14px}.scale-stage{height:330px;margin:10px -10px 0}.scale-toolbar{gap:10px;margin-bottom:24px}.scale-story button{font-size:11px;padding:10px 12px}.scale-measure{font-size:9px}.scale-coin-label{font-size:8px}.scale-caption{font-size:10px}.scale-caption>p:first-child{font-size:11px}}
+
+/* The comparison is an optional disclosure from the product's size caption. */
+.scale-story[hidden]{display:none}
+.scale-story{position:relative;scroll-margin-top:20px}
+.hardware-model-meta .hardware-size-link{pointer-events:auto;background:none;border:0;padding:8px 0;min-height:44px;color:#737373;font:inherit;font-size:11px;cursor:pointer;text-decoration:underline;text-decoration-color:#d4d4d4;text-underline-offset:4px}
+.hardware-size-link span{display:inline-block;margin-left:5px;text-decoration:none}
+.hardware-size-link:hover{color:#171717}
+.hardware-size-link:focus-visible{outline:2px solid #2563eb;outline-offset:4px}
+.scale-story .scale-close{position:absolute;top:16px;right:5%;display:flex;gap:12px;align-items:center}
+.scale-close span{font-size:20px}
+.scale-heading h2:focus{outline:none}
