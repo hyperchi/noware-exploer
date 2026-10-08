@@ -19,6 +19,10 @@ export function createApp({cubeStore}={}){
   next();
  });
  app.all('/api/auth',express.json({limit:'20kb'}),auth);
+ // Public homepage: the 3D showcase and its assets need no session.
+ app.get('/', (req,res)=>res.sendFile(path.join(dist,'index.html')));
+ app.use('/assets',express.static(path.join(dist,'assets'),{dotfiles:'deny',etag:false,lastModified:false,setHeaders:res=>res.setHeader('Cache-Control','public, max-age=31536000, immutable')}));
+ app.use('/showcase',express.static(path.join(dist,'showcase'),{dotfiles:'deny',etag:false,lastModified:false,setHeaders:res=>res.setHeader('Cache-Control','public, max-age=86400')}));
  app.get('/login', (req,res)=>res.sendFile(path.join(dist,'login.html')));
  app.get('/login.html', (req,res)=>res.redirect(308,'/login'));
  for(const file of ['login.js','favicon.ico'])app.get('/'+file,(req,res)=>res.sendFile(path.join(dist,file)));
@@ -29,6 +33,7 @@ export function createApp({cubeStore}={}){
   next();
  });
  app.use('/api/cube',cubeRouter(cubeStore));
+ app.get(['/explorer','/explorer/'],(req,res)=>res.sendFile(path.join(dist,'explorer.html')));
  app.use(express.static(dist,{dotfiles:'deny',etag:false,lastModified:false,setHeaders:res=>res.setHeader('Cache-Control','private, no-store')}));
  app.use((req,res)=>res.status(404).send('Not found'));
  app.use((err,req,res,next)=>{res.status(err.status===413?413:400).json({error:'Request could not be processed.'})});
