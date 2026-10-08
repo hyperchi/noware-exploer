@@ -3,6 +3,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true});
 const page=await browser.newPage({viewport:{width:1440,height:1050}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.goto(process.env.TEST_URL||'http://localhost:5173');
+await page.locator('#playground > summary').click();
 await page.locator('#pcb .footprint').first().waitFor();
 await page.keyboard.press('Escape');
 await page.getByRole('button',{name:'U7 ESP32-H2-MINI-1'}).click();

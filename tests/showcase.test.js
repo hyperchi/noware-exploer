@@ -1,0 +1,2 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {storyPose} from '../src/showcase/config.js';
+test('story assembly reverses deterministically and closes at both ends',()=>{assert.equal(storyPose(0).explode,0);assert.equal(storyPose(1).explode,0);assert.equal(storyPose(.5).explode,1);const forward=Array.from({length:101},(_,i)=>storyPose(i/100));for(let i=100;i>=0;i--)assert.deepEqual(storyPose(i/100),forward[i]);for(const pose of forward)assert.ok(pose.explode>=0&&pose.explode<=1);});
