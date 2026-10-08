@@ -3,6 +3,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {scaleConfig as C,ease,coinSupport} from './config.js';
 import {makeEgg,makeQuarter} from './assets.js';
+import {comparisonCameraPose} from './camera.js';
 export async function createComparison(host,state){
  const renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
  renderer.setPixelRatio(Math.min(devicePixelRatio,C.quality.pixelRatio));renderer.setClearColor('#fff',0);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.85;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;
@@ -33,8 +34,7 @@ export async function createComparison(host,state){
  function render(now){raf=0;if(dead||!visible||document.hidden)return;
  const rt=state.reduced||state.mobile?1:Math.min(1,(now-revealStart)/C.timing.reveal),r=ease(rt),v=state.reduced?1:ease((now-viewStart)/C.timing.view);view=T.MathUtils.lerp(from,to,v);
  const w=host.clientWidth,h=host.clientHeight,aspect=w/h,vertical=T.MathUtils.lerp(C.camera.closeSpan,Math.max((state.mobile?C.camera.mobileSpan:C.camera.span)/aspect,state.mobile?150:118),r);camera.left=-vertical*aspect/2;camera.right=vertical*aspect/2;camera.top=vertical/2;camera.bottom=-vertical/2;
- const orbitTarget=new T.Vector3(...C.camera.target),orbit=new T.Spherical().setFromVector3(new T.Vector3(...C.camera.compare).sub(orbitTarget));orbit.theta+=state.rotation.yaw;orbit.phi+=state.rotation.pitch;
- camera.position.setFromSpherical(orbit).add(orbitTarget).lerp(new T.Vector3(...C.camera.overhead),view);const target=new T.Vector3(...C.camera.target).multiplyScalar(r);target.multiplyScalar(1-view);target.z+=view*10;camera.position.z+=view*10;camera.lookAt(target);camera.updateProjectionMatrix();
+ const pose=comparisonCameraPose(view,r,state.rotation);camera.position.copy(pose.position);camera.quaternion.copy(pose.orientation);camera.updateProjectionMatrix();
  egg.rotation.set(0,.12*(1-view),0);egg.rotation.x=(1-r)*.3;egg.position.set(C.positions.egg[0]-(1-r)*20-view*3,0,C.positions.egg[2]);egg.updateMatrixWorld();egg.position.y=-new T.Box3().setFromObject(egg).min.y;
  const settle=ease((rt-.35)/.65),tilt=(1-settle)*Math.PI/2+Math.sin(settle*Math.PI*6)*.08*Math.sin(settle*Math.PI);coin.rotation.set(tilt,(1-settle)*Math.PI*2,0);coin.position.set(T.MathUtils.lerp(C.positions.coin[0]+(1-settle)*55,-qd.diameter/2,view),coinSupport(tilt,qd.diameter/2,qd.thickness),T.MathUtils.lerp(C.positions.coin[2],C.positions.footprintZ,view));
  coin2.visible=view>.001;coin2.position.set(T.MathUtils.lerp(110,qd.diameter/2,view),qd.thickness/2,C.positions.footprintZ);

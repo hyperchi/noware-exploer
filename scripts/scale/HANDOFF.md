@@ -21,3 +21,6 @@ CAD enclosure is 49×49×32 mm, while retail lists 36 mm high; both are disclose
 
 ## Comparison interaction refinement
 Compare now supports bounded camera orbit by mouse drag, horizontal touch swipe, or arrow keys with the canvas focused. All objects remain fixed at the same physical scale. Vertical touch gestures retain page scrolling. Footprint mode locks the camera overhead and preserves the previous Compare angle; Reset view restores the default, and Replay resets the angle before the reveal. Limits and sensitivity are in `scaleConfig.interaction`. `node scripts/scale/drag.mjs` checks mouse/touch input, normal mobile scrolling, keyboard, reset, footprint lock, and restored orbit. The refined header, grouped secondary actions and primary view selector remain within the optional disclosure. Posters have been regenerated for the adjusted composition and diffuser material.
+
+## Camera endpoint correction
+`src/scale/camera.js` interpolates explicit camera quaternions, avoiding world-up lookAt instability at the overhead pole. The endpoint is now mathematically vertical. Regression tests cover both directions and the full drag limits; `node scripts/scale/transition.mjs` captures late animation positions and checks projected-label continuity. The quarter's silver-tone remapping and shallow relief settings are in `src/scale/assets.js`.

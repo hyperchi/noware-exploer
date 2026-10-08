@@ -1,0 +1,17 @@
+[
+  {
+    "mode": "footprint",
+    "maximumLateFrameMovement": 1.0574926760975711,
+    "maximumMovementPerProgress": 197.5525309885949
+  },
+  {
+    "mode": "compare",
+    "maximumLateFrameMovement": 2.7429307318997105,
+    "maximumMovementPerProgress": 531.6859975587254
+  },
+  {
+    "mode": "footprint",
+    "maximumLateFrameMovement": 0.8863456944104879,
+    "maximumMovementPerProgress": 182.60273820509968
+  }
+]
