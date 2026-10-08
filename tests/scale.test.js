@@ -33,3 +33,13 @@ test('footprint camera is exactly overhead with a stable north direction',()=>{
  assert.ok(forward.distanceTo(new T.Vector3(0,-1,0))<1e-10);
  assert.ok(up.distanceTo(new T.Vector3(0,0,-1))<1e-10);
 });
+
+test('both quarters remain separate along the compare-to-footprint path',()=>{
+ const d=C.dimensions.quarter.diameter;
+ for(let i=0;i<=100;i++){
+  const t=i/100;
+  const x1=T.MathUtils.lerp(C.positions.coin[0],-d/2,t),z1=T.MathUtils.lerp(C.positions.coin[2],C.positions.footprintZ,t);
+  const x2=T.MathUtils.lerp(C.positions.secondCoin[0],d/2,t),z2=T.MathUtils.lerp(C.positions.secondCoin[2],C.positions.footprintZ,t);
+  assert.ok(Math.hypot(x2-x1,z2-z1)>=d-1e-10,'Coin edges must not intersect');
+ }
+});

@@ -24,3 +24,8 @@ Compare now supports bounded camera orbit by mouse drag, horizontal touch swipe,
 
 ## Camera endpoint correction
 `src/scale/camera.js` interpolates explicit camera quaternions, avoiding world-up lookAt instability at the overhead pole. The endpoint is now mathematically vertical. Regression tests cover both directions and the full drag limits; `node scripts/scale/transition.mjs` captures late animation positions and checks projected-label continuity. The quarter's silver-tone remapping and shallow relief settings are in `src/scale/assets.js`.
+
+## Persistent references and coin sharpness
+Both quarters now stay in the scene in both modes. Compare places them slightly staggered, and Footprint slides them into the measured 48.52 mm row; neither coin is hidden during the transition. Their paths keep their edges separate. Position tuning is in `positions.coin` and `positions.secondCoin`.
+
+Quarter faces use a restrained unsharp mask, stronger tonal separation and a much shallower bump to avoid muddy lettering. Anisotropic filtering keeps angled faces legible. `quality.pixelRatio` now allows native 2× Retina rendering; still frames remain on demand. The capture script uses a 2× device scale so the regenerated fallback posters retain the same detail.

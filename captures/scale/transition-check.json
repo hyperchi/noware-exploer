@@ -1,17 +1,17 @@
 [
   {
     "mode": "footprint",
-    "maximumLateFrameMovement": 1.0574926760975711,
-    "maximumMovementPerProgress": 197.5525309885949
+    "maximumLateFrameMovement": 1.0584062972223804,
+    "maximumMovementPerProgress": 173.44737991679273
   },
   {
     "mode": "compare",
-    "maximumLateFrameMovement": 2.7429307318997105,
-    "maximumMovementPerProgress": 531.6859975587254
+    "maximumLateFrameMovement": 2.8927485200064957,
+    "maximumMovementPerProgress": 556.3233097758946
   },
   {
     "mode": "footprint",
-    "maximumLateFrameMovement": 0.8863456944104879,
-    "maximumMovementPerProgress": 182.60273820509968
+    "maximumLateFrameMovement": 0.9107444702000652,
+    "maximumMovementPerProgress": 213.80233862144604
   }
 ]
