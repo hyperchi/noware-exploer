@@ -1,6 +1,6 @@
 # Size comparison handoff
 
-Run `npm install`, `npm run dev -- --port 5177`, then open **http://localhost:5177/home.html** and click **About the size of an egg**. The comparison is hidden and its 3D scene is not loaded until opened. Close or Escape collapses it and returns focus to the caption. The development `/` route is the signed-in engineering entry; production Express serves the public homepage at `/` for visitors. No deployment is part of this change.
+Run `npm install`, `npm run dev -- --port 5177`, then open **http://localhost:5177/home.html** and click **About the size of an egg**. The comparison is hidden and its 3D scene is not loaded until opened. Clicking the egg-size caption again or pressing Escape collapses it and returns focus to the caption. The development `/` route is the signed-in engineering entry; production Express serves the public homepage at `/` for visitors. No deployment is part of this change.
 
 ## Changed files
 - `src/home.js`: mounts this additive section immediately after the existing showcase.

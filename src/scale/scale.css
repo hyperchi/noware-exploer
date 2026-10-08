@@ -11,8 +11,6 @@
 .hardware-size-link span{display:inline-block;margin-left:5px;text-decoration:none}
 .hardware-size-link:hover{color:#171717}
 .hardware-size-link:focus-visible{outline:2px solid #2563eb;outline-offset:4px}
-.scale-story .scale-close{position:absolute;top:16px;right:5%;display:flex;gap:12px;align-items:center}
-.scale-close span{font-size:20px}
 .scale-heading h2:focus{outline:none}
 
 .scale-view-tools{display:flex;justify-content:center;align-items:center;gap:18px;margin:-6px auto 8px;color:#8a8a8a;font-size:10px}
