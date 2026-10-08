@@ -1,26 +1,155 @@
-.hardware-story{--air-color:#7dbb70;background:#f1f0ec;color:#29332e;position:relative;height:calc(100svh + 1000px);border-bottom:1px solid #d8d9d2}.hardware-sticky{position:sticky;top:0;min-height:760px;height:100svh;max-height:1050px;padding:24px 4.8% 16px;display:flex;flex-direction:column}.hardware-topline,.hardware-bottomline{display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#777c74}.hardware-topline{padding-bottom:22px;border-bottom:1px solid #d9dcd3}.hardware-layout{display:grid;grid-template-columns:39% 61%;flex:1;min-height:390px}.hardware-copy{padding:43px 0 18px;position:relative;z-index:2}.hardware-kicker{font-size:8px;letter-spacing:1.4px;display:flex;align-items:center;gap:8px;color:#71796f}.hardware-kicker>span{width:5px;height:5px;background:#74906a;border-radius:50%}.hardware-copy h2{font-size:clamp(42px,4.4vw,70px);line-height:1.02;letter-spacing:-3px;font-weight:500;margin:25px 0 23px}.hardware-copy h2 em{font-style:normal;color:#899082}.hardware-intro{font-size:13px;line-height:1.8;color:#747b71}.hardware-cta{display:inline-flex;align-items:center;gap:40px;background:#29382e;color:#f5f5ed;padding:14px 18px;margin-top:24px;font-size:11px}.hardware-cta:hover{background:#435540}.hardware-chapter{margin-top:35px;max-width:290px;padding-left:34px;position:relative}.hardware-chapter>span{position:absolute;top:4px;left:0;font:8px monospace;color:#878e80;writing-mode:vertical-rl}.hardware-chapter h3{font-size:15px;font-weight:500;margin-bottom:8px}.hardware-chapter p{font-size:11px;color:#777f72;line-height:1.65}.hardware-visual{position:relative;min-width:0;min-height:400px}.hardware-canvas,.hardware-poster{position:absolute;inset:0;width:100%;height:100%}.hardware-poster{object-fit:contain;transition:opacity .5s}.hardware-ready .hardware-poster{opacity:0;pointer-events:none}.hardware-canvas canvas{display:block;touch-action:pan-y;cursor:grab}.hardware-canvas canvas:active{cursor:grabbing}.hardware-model-meta{position:absolute;z-index:2;top:23px;left:7%;right:0;display:flex;justify-content:space-between;font-size:9px;color:#909487;letter-spacing:.3px;pointer-events:none}.hardware-view-tools{position:absolute;bottom:16px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:22px;font-size:9px;color:#858c7d}.hardware-view-tools button{border:0;border-left:1px solid #cbd0c1;padding:6px 0 6px 22px;background:none;color:#58634e;font-size:9px}.hardware-controls{padding:20px 0;border-top:1px solid #d5d9cd;border-bottom:1px solid #d5d9cd;display:flex;justify-content:space-between;align-items:center;gap:15px}.hardware-assembly{display:flex;gap:8px}.hardware-assembly button{border:1px solid #bfc6b5;background:transparent;color:#424d3b;padding:12px 14px;min-height:44px;font-size:11px;white-space:nowrap}.hardware-assembly button:first-child{min-width:160px;display:flex;justify-content:space-between;gap:20px}.hardware-assembly button[aria-pressed=true]{background:#e1e5d9}.hardware-air{display:flex;align-items:center;gap:18px}.hardware-demo{font-size:8px;letter-spacing:1.2px;color:#858d7c}.hardware-air [role=group]{display:flex;gap:3px}.hardware-air button{border:1px solid transparent;padding:11px 12px;min-height:44px;background:none;font-size:10px;color:#7a8173;white-space:nowrap}.hardware-air button[aria-pressed=true]{border-color:#c7cebc;color:#35462d;background:#fafbf380}.hardware-air i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#85b977;margin-right:8px}.hardware-air [data-air=attention] i{background:#d4b156}.hardware-air [data-air=poor] i{background:#ce7b6b}.hardware-status{font-size:10px;min-width:165px;color:#63705b}.hardware-details{min-height:75px;padding:15px 0;display:flex;align-items:flex-start;gap:20px;position:relative}.hardware-part-copy{display:flex;flex-direction:column;gap:6px;max-width:480px}.hardware-part-copy strong{font-size:11px;font-weight:500}.hardware-part-copy>span{font-size:10px;line-height:1.6;color:#7b8472}.hardware-part-buttons{margin-left:auto;display:flex;flex-wrap:wrap;max-width:470px;justify-content:flex-end;gap:3px}.hardware-part-buttons button{font-size:9px;min-height:32px;background:none;border:1px solid #d3d9ca;padding:6px 9px;color:#66745a}.hardware-part-buttons button[aria-pressed=true]{background:#dce5d2}.hardware-part-buttons[hidden],.hardware-flow-note[hidden]{display:none}.hardware-flow-note{font-size:9px;color:#687b5b;max-width:170px;line-height:1.5}.hardware-chapters{display:flex;gap:22px;border-top:1px solid #d5d9cd;padding:10px 0}.hardware-chapters button{font-size:10px;color:#8e9686;background:none;border:0;min-height:36px;padding:0}.hardware-chapters button>span{font:9px monospace;margin-right:8px}.hardware-chapters button[aria-current=step]{color:#334c2b}.hardware-chapters button[aria-current=step]>span{border-bottom:1px solid #688354;padding-bottom:5px}.hardware-chapters [data-action=scroll]{margin-left:auto;font-size:9px}.hardware-bottomline{font-size:8px;letter-spacing:1px;margin-top:auto;padding-top:5px}.hardware-anchors button{position:absolute;z-index:3;border:0;border-bottom:1px solid #aeb9a5;background:#f1f0ecdd;color:#425637;padding:7px 9px;font-size:9px;transform:translate(30px,-12px);min-height:32px}.hardware-anchors button:before{content:'';position:absolute;width:30px;height:1px;left:-30px;top:50%;background:#899c7a}.hardware-fallback{position:absolute;bottom:50px;left:0;right:0;text-align:center;color:#7c8474;font-size:11px}.hardware-story button:focus-visible,.hardware-story a:focus-visible{outline:2px solid #4c683d;outline-offset:4px}.hardware-story button:hover{color:#283f1e}.hardware-unavailable .hardware-view-tools{display:none}
-@media(min-width:1700px){.hardware-sticky{padding-left:max(5%,calc((100vw - 1530px)/2));padding-right:max(5%,calc((100vw - 1530px)/2))}}
-@media(max-width:1100px){.hardware-status{display:none}.hardware-air{gap:8px}.hardware-copy h2{font-size:49px}.hardware-demo{max-width:60px;line-height:1.5}.hardware-details{min-height:95px}.hardware-chapters{gap:15px}.hardware-chapters button{font-size:9px}}
-@media(max-width:700px){.hardware-story{height:auto}.hardware-sticky{position:relative;min-height:0;height:auto;max-height:none;padding:21px 22px 18px}.hardware-topline{font-size:7px;letter-spacing:1px;padding-bottom:17px}.hardware-layout{display:flex;flex-direction:column;min-height:0}.hardware-copy{padding:25px 0 0}.hardware-kicker{font-size:7px}.hardware-copy h2{font-size:43px;letter-spacing:-2px;margin:17px 0 15px;line-height:1.07}.desktop-break{display:none}.hardware-intro{font-size:11px}.hardware-cta{font-size:10px;margin-top:17px;padding:12px 14px}.hardware-chapter{margin-top:20px;max-width:100%;min-height:65px}.hardware-chapter h3{font-size:13px}.hardware-chapter p{font-size:10px;max-width:290px}.hardware-visual{height:330px;min-height:330px;margin:-5px -10px 0}.hardware-model-meta{top:10px;font-size:8px;left:10px;right:10px}.hardware-view-tools{bottom:5px}.hardware-controls{flex-direction:column;gap:12px;padding:14px 0;align-items:stretch}.hardware-assembly{justify-content:center}.hardware-assembly button{flex:1}.hardware-air{flex-wrap:wrap;justify-content:center;gap:4px 7px}.hardware-demo{max-width:none;width:100%;text-align:center;font-size:7px}.hardware-air button{font-size:10px;padding:9px 10px}.hardware-status{display:block;min-width:0;width:100%;text-align:center;font-size:9px}.hardware-details{min-height:75px;flex-wrap:wrap;gap:9px}.hardware-part-copy{max-width:none}.hardware-part-buttons{margin:0;justify-content:flex-start;max-width:none}.hardware-part-buttons button{min-height:44px}.hardware-flow-note{max-width:none}.hardware-chapters{gap:3px;justify-content:space-between;flex-wrap:wrap}.hardware-chapters button{font-size:0;min-width:44px;min-height:44px}.hardware-chapters button>span{font-size:12px;margin:0}.hardware-bottomline{font-size:6px;letter-spacing:.6px;gap:12px}.hardware-anchors button{font-size:8px;transform:translate(18px,-12px);min-height:36px}.hardware-anchors button:before{width:18px;left:-18px}}
-@media(prefers-reduced-motion:reduce){.hardware-story{height:auto}.hardware-sticky{position:relative}.hardware-poster{transition:none}}
-.hardware-anchors [data-anchor=pcb]{transform:translate(-175px,-12px)}.hardware-anchors [data-anchor=pcb]:before{left:auto;right:-60px;width:60px}.hardware-anchors [data-anchor=diffuser]{transform:translate(130px,-12px)}.hardware-anchors [data-anchor=diffuser]:before{left:-45px;width:45px}
-@media(max-width:700px){.hardware-anchors [data-anchor=pcb]{transform:translate(-110px,-12px)}.hardware-anchors [data-anchor=pcb]:before{right:-20px;width:20px}.hardware-anchors [data-anchor=diffuser]{transform:translate(55px,-12px)}.hardware-anchors [data-anchor=diffuser]:before{left:-20px;width:20px}}
-.hardware-story>.hardware-sticky>.hardware-flow-note{max-width:none;margin:8px 0 0;min-height:15px;font-size:9px;text-align:right;color:#72817c}
-.hardware-playground{background:#f5f5f5}.hardware-playground>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:28px 4.8%;font-size:13px;color:#4c584e;border-bottom:1px solid #dedfd8}.hardware-playground>summary::-webkit-details-marker{display:none}.hardware-playground>summary span{font-size:10px;color:#7b8378}.hardware-playground>summary:focus-visible{outline:2px solid #4c683d;outline-offset:-5px}.hardware-playground[open]>summary{background:#e8ebe3}
-@media(max-width:700px){.hardware-playground>summary{padding:24px 22px;gap:20px}.hardware-playground>summary span{font-size:9px}}
-/* Make the interactive choices read as controls, rather than a footer legend. */
-.hardware-air{display:grid;gap:10px;justify-content:start}.hardware-air-heading{display:flex;align-items:center;justify-content:space-between;gap:24px;font-size:12px;font-weight:500;color:#3d4d3b}.hardware-air .hardware-demo{font-size:8px;font-weight:400;max-width:none;width:auto;letter-spacing:1px}.hardware-air [role=group]{gap:7px}.hardware-air button{min-height:46px;border:1px solid #bdc7b5;background:#ffffff38;padding:12px 16px;color:#4b5845;font-size:12px;transition:background .2s,border-color .2s,box-shadow .2s}.hardware-air button:hover{background:#ffffff90;border-color:#71836a}.hardware-air button[aria-pressed=true]{border-color:#6f8661;background:#e4ecd9;box-shadow:inset 0 -2px #6f8661}.hardware-air i{width:9px;height:9px;margin-right:9px}.hardware-air .hardware-status{display:block;text-align:left;width:auto;min-width:0;font-size:10px}.hardware-assembly button{font-size:12px;min-height:46px;background:#e5e9df;border-color:#b6c0ac}.hardware-assembly button:first-child{min-width:180px}
-@media(max-width:700px){.hardware-air{width:100%}.hardware-air-heading{font-size:12px;gap:12px}.hardware-air [role=group]{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:5px}.hardware-air button{font-size:11px;padding:12px 8px}.hardware-air i{margin-right:6px}.hardware-air .hardware-demo{font-size:7px}}
-.hardware-controls{justify-content:flex-start;gap:28px;padding:18px 0 18px 39%;align-items:center;border-top:0}.hardware-chapters{border-top:0}
-@media(max-width:1100px){.hardware-controls{padding-left:0;justify-content:center}}
-@media(max-width:700px){.hardware-controls{gap:18px;align-items:stretch}.hardware-assembly{justify-content:flex-start}.hardware-assembly button{flex:0 0 auto}}
-/* Quiet, tactile controls that share the product's softer finish. */
-.hardware-controls{align-items:flex-end;gap:24px;padding-top:16px;padding-bottom:22px}
-.hardware-assembly button,.hardware-assembly button[aria-pressed=true]{min-height:44px;min-width:172px;border:1px solid #cdd2c5;border-radius:6px;background:#f7f7f2;color:#47533e;padding:11px 15px;font-size:11px;box-shadow:0 1px 2px #25301d05}
-.hardware-assembly button:hover{background:#fffef8;border-color:#a4af98}.hardware-assembly button span{font-size:14px;color:#7b8770}
-.hardware-air{gap:9px}.hardware-air-heading{font-size:10px;font-weight:500;color:#64705b;gap:35px}.hardware-air .hardware-demo{font-size:7px;letter-spacing:1.1px;color:#909787}
-.hardware-air [role=group]{display:flex;gap:3px;padding:4px;background:#e6e9e0;border:1px solid #dce1d3;border-radius:8px}
-.hardware-air button{min-height:36px;border:0;border-radius:5px;background:transparent;padding:9px 14px;font-size:11px;color:#75806b;box-shadow:none}
-.hardware-air button:hover{background:#f2f4ed;color:#44543a}.hardware-air button[aria-pressed=true]{border:0;background:#fffef9;color:#3e5132;box-shadow:0 1px 4px #2c3d2414,inset 0 0 0 1px #ffffff80}
-.hardware-air i{width:7px;height:7px;margin-right:7px}.hardware-air .hardware-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-@media(max-width:700px){.hardware-controls{align-items:stretch;gap:18px}.hardware-air [role=group]{display:grid;grid-template-columns:1fr 1.5fr 1fr}.hardware-air button{min-height:40px;padding:10px 7px;font-size:10px}.hardware-air-heading{font-size:10px}.hardware-assembly button:first-child{min-width:172px}}
+/* NOWARE product presentation. Engineering-tool styles remain in style.css. */
+.noware-home { background: #f1f0ec; }
+.noware-home header { height: 72px; padding: 0 4.8%; background: #f1f0ec; border-color: #dedfd6; }
+.noware-home header .brand strong { font-size: 27px; letter-spacing: -1.5px; }
+.noware-home header .brand > span { font-size: 11px; color: #899080; }
+.noware-home header .header-right { letter-spacing: .6px; }
+.noware-home header .github { color: #54604c; }
+.noware-home footer { padding: 25px 4.8%; background: #eeeee8; border-top: 1px solid #dedfd6; color: #7c8474; }
+.hardware-story {
+ --air-color: #7dbb70;
+ background: #f1f0ec; color: #29332e; position: relative;
+ height: calc(100svh + 1000px); border-bottom: 1px solid #d8d9d2;
+}
+.hardware-sticky {
+ position: sticky; top: 0; min-height: 740px; height: calc(100svh - 72px); max-height: 1050px;
+ padding: 25px 4.8% 20px; display: flex; flex-direction: column;
+}
+.hardware-topline, .hardware-bottomline {
+ display: flex; justify-content: space-between; gap: 20px;
+ font-size: 8px; letter-spacing: 1.5px; color: #87907e;
+}
+.hardware-topline { padding-bottom: 20px; }
+.hardware-bottomline { margin-top: auto; padding-top: 18px; font-size: 7px; letter-spacing: 1.2px; }
+.hardware-layout { display: grid; grid-template-columns: 39% 61%; flex: 1; min-height: 380px; }
+.hardware-copy { padding: 42px 0 12px; position: relative; z-index: 2; }
+.hardware-kicker { display: flex; align-items: center; gap: 9px; font-size: 9px; letter-spacing: 1.9px; color: #6f7d65; }
+.hardware-kicker > span { width: 5px; height: 5px; background: #7c8d6f; border-radius: 50%; }
+.hardware-copy h2 { font-size: clamp(44px,4.5vw,72px); line-height: 1.025; letter-spacing: -3.5px; font-weight: 500; margin: 25px 0; }
+.hardware-copy h2 em { font-style: normal; color: #929988; }
+.hardware-intro { font-size: 13px; line-height: 1.85; color: #7e8578; }
+.hardware-cta { display: inline-flex; align-items: center; gap: 36px; padding: 14px 19px; margin-top: 25px; border-radius: 4px; background: #303e31; color: #f6f6ee; font-size: 11px; transition: background .2s; }
+.hardware-cta:hover { background: #4b5a42; }
+.hardware-chapter { margin-top: 33px; padding-left: 32px; max-width: 285px; position: relative; }
+.hardware-chapter > span { position: absolute; top: 4px; left: 0; font: 8px monospace; color: #929a87; writing-mode: vertical-rl; }
+.hardware-chapter h3 { font-size: 13px; font-weight: 500; margin-bottom: 7px; }
+.hardware-chapter p { font-size: 10px; line-height: 1.7; color: #858d7b; }
+.hardware-visual { position: relative; min-width: 0; min-height: 380px; }
+.hardware-canvas, .hardware-poster { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hardware-poster { object-fit: contain; transition: opacity .5s; }
+.hardware-ready .hardware-poster { opacity: 0; pointer-events: none; }
+.hardware-canvas canvas { display: block; touch-action: pan-y; cursor: grab; }
+.hardware-canvas canvas:active { cursor: grabbing; }
+.hardware-model-meta { position: absolute; z-index: 2; top: 16px; left: 7%; font-size: 9px; letter-spacing: .2px; color: #8e9784; pointer-events: none; }
+.hardware-view-tools { position: absolute; bottom: 7px; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 20px; font-size: 9px; color: #89927f; }
+.hardware-view-tools button { border: 0; border-left: 1px solid #cfd5c6; padding: 7px 0 7px 20px; background: none; color: #6e7b61; font-size: 9px; }
+.hardware-controls { display: flex; justify-content: center; align-items: flex-end; gap: 24px; padding: 18px 0 14px 39%; }
+.hardware-assembly { display: flex; }
+.hardware-assembly button { display: flex; align-items: center; justify-content: space-between; gap: 32px; min-width: 169px; min-height: 46px; padding: 11px 15px; border: 1px solid #cdd2c5; border-radius: 6px; background: #f7f7f2; color: #47533e; font-size: 11px; box-shadow: 0 1px 2px #25301d05; }
+.hardware-assembly button:hover { background: #fffef8; border-color: #a4af98; }
+.hardware-assembly button span { font-size: 14px; color: #7b8770; }
+.hardware-air { display: grid; gap: 9px; }
+.hardware-air-heading { display: flex; align-items: center; justify-content: space-between; gap: 30px; font-size: 10px; font-weight: 500; color: #64705b; }
+.hardware-demo { font-size: 7px; font-weight: 400; letter-spacing: 1.1px; color: #909787; }
+.hardware-air [role=group] { display: flex; gap: 3px; padding: 4px; border: 1px solid #dce1d3; border-radius: 8px; background: #e6e9e0; }
+.hardware-air button { white-space: nowrap; min-height: 36px; padding: 9px 14px; border: 0; border-radius: 5px; background: transparent; font-size: 11px; color: #5d6953; transition: background .2s,box-shadow .2s; }
+.hardware-air button:hover { background: #f2f4ed; color: #44543a; }
+.hardware-air button[aria-pressed=true] { background: #fffef9; color: #3e5132; box-shadow: 0 1px 4px #2c3d2414,inset 0 0 0 1px #ffffff80; }
+.hardware-air i { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #85b977; }
+.hardware-air [data-air=attention] i { background: #d4b156; }
+.hardware-air [data-air=poor] i { background: #ce7b6b; }
+.hardware-status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.hardware-flow-note { text-align: center; margin: 0 0 12px 39%; font-size: 8px; color: #98a18e; letter-spacing: .25px; }
+.hardware-chapters { display: flex; justify-content: space-between; gap: 12px; margin-left: 39%; padding-top: 8px; border-top: 1px solid #dde1d5; }
+.hardware-chapters button { border: 0; background: none; min-height: 34px; padding: 0; font-size: 9px; color: #9aa28f; }
+.hardware-chapters button > span { margin-right: 6px; font: 8px monospace; }
+.hardware-chapters button[aria-current=step] { color: #526844; }
+.hardware-chapters button[aria-current=step] > span { border-bottom: 1px solid #7e926c; padding-bottom: 4px; }
+.hardware-chapters [data-action=scroll] { position: absolute; bottom: 18px; right: 4.8%; min-height: 22px; font-size: 8px; background: #f1f0ec; }
+.hardware-story:has([data-action=scroll]:not([hidden])) .hardware-bottomline > span:last-child { visibility: hidden; }
+.hardware-anchors button { position: absolute; z-index: 3; min-height: 32px; padding: 7px 9px; border: 0; border-bottom: 1px solid #aeb9a5; background: #f1f0ecdd; color: #425637; font-size: 9px; transform: translate(30px,-12px); }
+.hardware-anchors button:before { content: ''; position: absolute; width: 30px; height: 1px; left: -30px; top: 50%; background: #899c7a; }
+.hardware-anchors [data-anchor=pcb] { transform: translate(-175px,-12px); }
+.hardware-anchors [data-anchor=pcb]:before { left: auto; right: -60px; width: 60px; }
+.hardware-anchors [data-anchor=diffuser] { transform: translate(130px,-12px); }
+.hardware-anchors [data-anchor=diffuser]:before { left: -45px; width: 45px; }
+.hardware-fallback { position: absolute; bottom: 45px; left: 0; right: 0; text-align: center; color: #7c8474; font-size: 11px; }
+.hardware-unavailable .hardware-view-tools { display: none; }
+.hardware-story button:focus-visible, .hardware-story a:focus-visible, .hardware-origin a:focus-visible { outline: 2px solid #6a805b; outline-offset: 4px; }
+.hardware-origin { padding: 75px 8% 55px; background: #e7e9e0; color: #384534; }
+.origin-eyebrow { display: flex; align-items: center; gap: 10px; font-size: 8px; letter-spacing: 1.8px; color: #7d8872; }
+.origin-eyebrow > span { font-size: 21px; color: #6b7f5b; }
+.hardware-origin h2 { font-size: clamp(38px,4.5vw,68px); line-height: 1.12; font-weight: 400; letter-spacing: -2.5px; margin: 30px 0 40px; }
+.hardware-origin h2 > span { color: #8d9881; }
+.origin-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 30px; padding-top: 25px; border-top: 1px solid #cbd1c0; }
+.origin-bottom p { font-size: 12px; color: #818c75; line-height: 1.9; }
+.origin-link { display: inline-flex; gap: 55px; font-size: 12px; padding: 12px 0; border-bottom: 1px solid #8f9d80; }
+.origin-link:hover { color: #6e845a; }
+.hardware-playground { background: #eeeee8; }
+.hardware-playground > summary { list-style: none; display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 27px 4.8%; font-size: 12px; color: #66745a; }
+.hardware-playground > summary::-webkit-details-marker { display: none; }
+.hardware-playground > summary span { font-size: 10px; color: #8a947e; }
+.hardware-playground > summary:focus-visible { outline: 2px solid #4c683d; outline-offset: -5px; }
+.hardware-playground[open] > summary { background: #e8ebe3; }
+@media(min-width:1700px) {
+ .hardware-sticky { padding-left: max(5%,calc((100vw - 1530px)/2)); padding-right: max(5%,calc((100vw - 1530px)/2)); }
+}
+@media(max-width:1100px) {
+ .hardware-copy h2 { font-size: 48px; letter-spacing: -2.5px; }
+ .hardware-controls { padding-left: 25%; gap: 16px; }
+ .hardware-chapters { margin-left: 25%; }
+ .hardware-flow-note { margin-left: 25%; }
+ .hardware-air button { padding: 9px 10px; font-size: 10px; }
+ .hardware-chapters button { font-size: 8px; }
+}
+@media(max-width:700px) {
+ .noware-home header { height: 64px; padding: 0 22px; }
+ .noware-home header .brand strong { font-size: 25px; }
+ .noware-home header .github { font-size: 9px; margin-left: 7px; }
+ .noware-home header .signout { font-size: 8px; }
+ .noware-home footer { padding: 22px; font-size: 8px; gap: 20px; }
+ .hardware-story { height: auto; }
+ .hardware-sticky { position: relative; height: auto; min-height: 0; max-height: none; padding: 20px 22px; }
+ .hardware-topline { font-size: 7px; letter-spacing: 1px; padding-bottom: 20px; }
+ .hardware-layout { display: flex; flex-direction: column; min-height: 0; }
+ .hardware-copy { padding: 17px 0 0; }
+ .hardware-kicker { font-size: 8px; letter-spacing: 1.6px; }
+ .hardware-copy h2 { font-size: 45px; letter-spacing: -2.3px; margin: 21px 0 18px; }
+ .desktop-break { display: none; }
+ .hardware-intro { font-size: 12px; }
+ .hardware-cta { margin-top: 20px; padding: 12px 16px; font-size: 10px; }
+ .hardware-chapter { display: none; }
+ .hardware-visual { height: 340px; min-height: 340px; margin: 20px -10px 0; }
+ .hardware-model-meta { top: 4px; left: 10px; font-size: 8px; }
+ .hardware-view-tools { bottom: 0; font-size: 8px; }
+ .hardware-view-tools button { font-size: 8px; }
+ .hardware-controls { padding: 22px 0 12px; flex-direction: column; align-items: stretch; gap: 20px; }
+ .hardware-assembly button { min-width: 162px; min-height: 44px; font-size: 11px; }
+ .hardware-air { width: 100%; }
+ .hardware-air-heading { font-size: 10px; }
+ .hardware-air [role=group] { display: grid; grid-template-columns: 1fr 1.5fr 1fr; }
+ .hardware-air button { min-height: 44px; padding: 10px 7px; font-size: 11px; }
+ .hardware-flow-note { margin: 0 0 14px; font-size: 8px; text-align: left; }
+ .hardware-chapters { margin-left: 0; gap: 0; }
+ .hardware-chapters button { min-width: 44px; min-height: 44px; font-size: 0; }
+ .hardware-chapters button > span { font-size: 11px; margin: 0; }
+ .hardware-bottomline { font-size: 6px; gap: 12px; line-height: 1.8; letter-spacing: .6px; padding-top: 15px; }
+ .hardware-anchors button { font-size: 8px; min-height: 36px; transform: translate(18px,-12px); }
+ .hardware-anchors button:before { width: 18px; left: -18px; }
+ .hardware-anchors [data-anchor=pcb] { transform: translate(-110px,-12px); }
+ .hardware-anchors [data-anchor=pcb]:before { right: -20px; width: 20px; }
+ .hardware-anchors [data-anchor=diffuser] { transform: translate(55px,-12px); }
+ .hardware-anchors [data-anchor=diffuser]:before { left: -20px; width: 20px; }
+ .hardware-origin { padding: 45px 22px 35px; }
+ .hardware-origin h2 { font-size: 41px; letter-spacing: -1.9px; margin: 25px 0 30px; }
+ .origin-bottom { flex-direction: column; align-items: flex-start; gap: 20px; }
+ .origin-bottom p { font-size: 11px; }
+ .origin-link { font-size: 11px; gap: 40px; }
+ .hardware-playground > summary { padding: 24px 22px; gap: 20px; font-size: 11px; }
+ .hardware-playground > summary span { font-size: 9px; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .hardware-story { height: auto; }
+ .hardware-sticky { position: relative; }
+ .hardware-poster, .hardware-air button, .hardware-cta { transition: none; }
+}

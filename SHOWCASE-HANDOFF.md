@@ -52,3 +52,5 @@ The separate authenticated live dashboard and production deployment are unchange
 The PCB list and engineering tools are now collapsed by default under Hardware playground. The hero CTA opens them on demand. Component selection highlights the model without a persistent explanatory text row.
 
 Airflow is always visible in every chapter and manual assembly state. There is no on/off control. Reduced motion keeps the same trails visible but stationary. The fallback poster includes airflow.
+
+The final editorial pass unifies the header, hero, controls, and footer; adds the Made in America closing section; and moves the provenance link into the footer. The closing CTA opens the existing playground. Styles are consolidated in one readable stylesheet rather than stacked overrides.
