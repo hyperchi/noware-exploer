@@ -19,6 +19,14 @@ export function createApp({cubeStore}={}){
   next();
  });
  app.all('/api/auth',express.json({limit:'20kb'}),auth);
+ // Homepage: the public showcase for visitors, the full workspace with a session.
+ app.get('/', async(req,res)=>{
+  const session=await readSession(getCookie(req.headers.cookie,SESSION_COOKIE),{secret:process.env.SESSION_SECRET,domain:ALLOWED_DOMAIN});
+  res.sendFile(path.join(dist,session?'index.html':'home.html'));
+ });
+ const publicStatic=dir=>express.static(path.join(dist,dir),{dotfiles:'deny',etag:false,lastModified:false,setHeaders:res=>res.setHeader('Cache-Control','public, max-age=86400')});
+ app.use('/assets',publicStatic('assets'));
+ app.use('/showcase',publicStatic('showcase'));
  app.get('/login', (req,res)=>res.sendFile(path.join(dist,'login.html')));
  app.get('/login.html', (req,res)=>res.redirect(308,'/login'));
  for(const file of ['login.js','favicon.ico'])app.get('/'+file,(req,res)=>res.sendFile(path.join(dist,file)));
