@@ -32,6 +32,11 @@ async function init() {
     new ResizeObserver(renderButton).observe(container);
     renderButton();
     message.textContent='Sign in with your Noso account or an approved guest Google account.';
+    // Open Google's account chooser straight away so Login is one step; the
+    // button stays as the fallback when the prompt is suppressed or dismissed.
+    google.accounts.id.prompt(notice=>{
+      if(notice.isNotDisplayed?.()||notice.isSkippedMoment?.())message.textContent='Choose your Google account below to continue.';
+    });
   }catch(e){fail(e.message||'Sign-in is unavailable. Please try again later.');}
 }
 init();
