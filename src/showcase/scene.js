@@ -26,7 +26,9 @@ export async function createScene(host,state,onSelect,onReady){
  flow.group.position.y=currentExplode*settings.explode.pcb;flow.update(time,tint,state.reduced);
  const sensor=parts.U2;if(flow.group.visible)sensor.traverse(o=>{if(o.material?.emissive)o.material.emissive.copy(tint).multiplyScalar(.22)});
  const distance=(innerWidth<650?1.15:1)*(1+currentExplode*.2);camera.position.set(...settings.camera).multiplyScalar(distance);camera.lookAt(0,19+currentExplode*14,0);
- scene.updateMatrixWorld(true);for(const label of labels){const o=parts[label.dataset.anchor];const pos=new T.Box3().setFromObject(o).getCenter(new T.Vector3()).project(camera);label.style.left=(pos.x*.5+.5)*host.clientWidth+'px';label.style.top=(-pos.y*.5+.5)*host.clientHeight+'px';label.hidden=currentExplode<.65;}
+ scene.updateMatrixWorld(true);
+ // Label anchors need a bounds pass per part; only pay for it while labels show.
+ if(currentExplode<.65){for(const label of labels)label.hidden=true}else for(const label of labels){const o=parts[label.dataset.anchor];const pos=new T.Box3().setFromObject(o).getCenter(new T.Vector3()).project(camera);label.style.left=(pos.x*.5+.5)*host.clientWidth+'px';label.style.top=(-pos.y*.5+.5)*host.clientHeight+'px';label.hidden=false;}
  renderer.render(scene,camera);host.dataset.explode=currentExplode.toFixed(2);host.dataset.flow=String(flow.group.visible);host.dataset.air=state.air;host.dataset.drawCalls=renderer.info.render.calls;host.dataset.triangles=renderer.info.render.triangles;
  if(!state.reduced||Math.abs(currentExplode-target)>.001)raf=requestAnimationFrame(frame);
  }
@@ -38,5 +40,8 @@ export async function createScene(host,state,onSelect,onReady){
  const move=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)>5)drag.moved=true;if(e.pointerType==='touch'&&Math.abs(dy)>Math.abs(dx))return;state.rotation=Math.max(-1.5,Math.min(1.5,drag.r+dx*.008));if(e.pointerType!=='touch')state.tilt=Math.max(-.18,Math.min(.3,drag.t+dy*.003));wake()};
  const up=e=>{if(drag&&!drag.moved){const r=canvas.getBoundingClientRect(),ray=new T.Raycaster();ray.setFromCamera(new T.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),camera);let hit=ray.intersectObject(model,true)[0]?.object;while(hit&&!components[hit.name])hit=hit.parent;if(hit)onSelect(hit.name)}drag=null;state.dragging=false;wake()};
  canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',()=>{drag=null;state.dragging=false});
+ // Compile every shader up front (airflow included) so the first scroll into the
+ // exploded view and the air chapter does not stall on shader compilation.
+ {const wasVisible=flow.group.visible;flow.group.visible=true;scene.updateMatrixWorld(true);try{renderer.compile(scene,camera)}catch{}flow.group.visible=wasVisible;}
  resize();wake();onReady();return {wake,dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();intersection.disconnect();document.removeEventListener('visibilitychange',visibility);scene.traverse(o=>{o.geometry?.dispose();for(const m of Array.isArray(o.material)?o.material:o.material?[o.material]:[])m.dispose()});glowTexture.dispose();env.dispose();renderer.dispose();canvas.remove();}};
 }
