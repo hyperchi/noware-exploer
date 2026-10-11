@@ -17,3 +17,8 @@ Run `npm run dev -- --port 5177`; open http://localhost:5177/home.html#what-it-d
 Build: `npm run build`; tests: `npm test`. No lint/typecheck script exists. Existing shared Three.js bundle-size warning remains. Chrome headless validates layout and behavior, not physical-device frame rate.
 
 Important unresolved product-specification issue: current Base hardware has no documented particulate sensor. Requested numeric PM2.5 demonstrations and allergy-detection implications are not shipped in this version. The room/environment story is implemented, but those product claims require verified hardware support. See the asset README for sources and exact limitations.
+
+## Continuous illustration update
+The same room now plays once over 24 seconds when visible. Four overlapping air paths keep continuity between activities; the cooking example stages ambient-air arrival, a VOC sensing pulse, a delayed light response, and recovery. Pause/play and replay are available. Chapter controls skip within the same scene; Follow scroll explicitly hands progress to reversible scrolling. Reduced motion uses static chapter poses. Offscreen/hidden rendering pauses.
+
+`src/purpose/flow.js` controls duration, source paths, overlap, and response timing. `room.js` controls particle visibility, the pulse, and materials. `tests/room-flow.test.js` checks overlapping source activity and detection ordering. `scripts/purpose/playback.mjs` verifies browser playback and captures the response. The visual paths and response timing are illustrative, not modeled gas transport or measured sensor latency.

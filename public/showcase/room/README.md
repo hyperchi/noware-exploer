@@ -13,3 +13,5 @@ The user has been asked whether a different PM-capable revision exists; that que
 
 ## Posters
 `poster.webp` and `poster-mobile.webp` are rendered from the same scene using `node scripts/purpose/check.mjs` with local Chrome. Run Vite at port 5177 first, or set `TEST_URL`. The static fallback preserves chapter copy and keyboard controls when GLB loading or WebGL is unavailable. It does not animate the room.
+
+The continuous playback uses four overlapping paths configured in `src/purpose/flow.js`. Cooking air passes above the enclosure and continues beyond it; it is not sucked into the device. A schematic ring identifies the sensing area, followed by a diffuser response. The path, timing, pulse, and light response are explanatory animation, not a validated internal flow route or measured sensor latency. Playback runs once, with pause/replay and optional scroll control; reduced-motion visitors see static poses.

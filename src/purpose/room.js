@@ -2,6 +2,7 @@ import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {roomFlowPaths,flowActivity,detectionPose,illustrationDuration} from './flow.js';
 const smooth=x=>{x=T.MathUtils.clamp(x,0,1);return x*x*(3-2*x)};
 export async function createRoom(host,state,onReady){
  const renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setClearColor('#fff',0);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;
@@ -42,28 +43,43 @@ export async function createRoom(host,state,onReady){
  const cat=new T.Group();scene.add(cat);ball(.23,.13,.11,0,.19,0,materials.fur,cat);ball(.11,.11,.09,.2,.27,0,materials.fur,cat);ball(.065,.045,.065,.27,.25,0,materials.fur,cat);
  for(const z of [-.062,.062]){const ear=new T.Mesh(new T.ConeGeometry(.045,.09,3),materials.fur);ear.position.set(.18,.38,z);ear.rotation.z=-.2;cat.add(ear);ball(.009,.012,.008,.285,.29,z,materials.metal,cat)}
  const paws=[];for(const x of [-.14,.14])for(const z of [-.065,.065])paws.push(box(.043,.15,.044,x,.08,z,materials.fur,.02,cat));tube([[-.2,.22,0],[-.36,.3,0],[-.43,.48,.02],[-.39,.53,.03]],.025,materials.fur,cat);
- const particleCount=120,positions=new Float32Array(particleCount*3),particleGeo=new T.BufferGeometry();particleGeo.setAttribute('position',new T.BufferAttribute(positions,3));
+ const particleCount=160,positions=new Float32Array(particleCount*3),opacities=new Float32Array(particleCount),particleGeo=new T.BufferGeometry();particleGeo.setAttribute('position',new T.BufferAttribute(positions,3));particleGeo.setAttribute('aOpacity',new T.BufferAttribute(opacities,1));
  const dot=document.createElement('canvas');dot.width=dot.height=32;const ctx=dot.getContext('2d'),gradient=ctx.createRadialGradient(16,16,0,16,16,16);gradient.addColorStop(0,'#fff');gradient.addColorStop(.5,'#ffffffbb');gradient.addColorStop(1,'#ffffff00');ctx.fillStyle=gradient;ctx.fillRect(0,0,32,32);const dotTexture=new T.CanvasTexture(dot);
- const particles=new T.Points(particleGeo,new T.PointsMaterial({size:2.2,map:dotTexture,color:'#778b90',transparent:true,opacity:0,depthWrite:false,sizeAttenuation:false}));scene.add(particles);
+ const particles=new T.Points(particleGeo,new T.PointsMaterial({size:3,map:dotTexture,color:'#778b90',transparent:true,opacity:.75,depthWrite:false,sizeAttenuation:false}));scene.add(particles);
+ particles.material.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute float aOpacity; varying float vOpacity;').replace('#include <begin_vertex>','#include <begin_vertex>\nvOpacity=aOpacity;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying float vOpacity;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a *= vOpacity;');};
+ const curves=roomFlowPaths.map(points=>new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p))));
+ const trails=curves.map(curve=>{const line=new T.Line(new T.BufferGeometry().setFromPoints(curve.getPoints(80)),new T.LineBasicMaterial({color:'#91a5a2',transparent:true,opacity:0,depthWrite:false}));scene.add(line);return line});
+ const pulse=new T.Mesh(new T.RingGeometry(.045,.049,48),new T.MeshBasicMaterial({color:'#c6a05d',transparent:true,opacity:0,depthWrite:false,side:T.DoubleSide}));pulse.rotation.x=-Math.PI/2;pulse.position.set(.53,.521,.8);scene.add(pulse);
+ const flowPoint=new T.Vector3();
  scene.add(new T.HemisphereLight('#fffaf0','#d4d5d0',1));const sunlight=new T.DirectionalLight('#fff4df',2.6);sunlight.position.set(-3.5,6,3);sunlight.castShadow=true;sunlight.shadow.mapSize.set(2048,2048);Object.assign(sunlight.shadow.camera,{left:-4,right:4,top:4,bottom:-4,near:.5,far:16});sunlight.shadow.bias=-.0003;sunlight.shadow.normalBias=.015;scene.add(sunlight);const fill=new T.DirectionalLight('#e5efff',.6);fill.position.set(4,3,4);scene.add(fill);
  let product;try{product=(await new GLTFLoader().loadAsync('/showcase/aircube-base.glb')).scene;}catch(error){dispose();throw error}
  product.scale.setScalar(.001);product.position.set(.53,.518,.8);product.rotation.y=.3;product.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=true});scene.add(product);
  const diffuser=product.getObjectByName('diffuser');diffuser.material.dispose();diffuser.material=new T.MeshPhysicalMaterial({color:'#c8dfb9',roughness:.5,transmission:.08,thickness:.0013,emissive:'#91d980',emissiveIntensity:.3});
  const canvas=renderer.domElement;canvas.setAttribute('role','img');canvas.setAttribute('aria-label','A shared living room with a sofa, cat, openable window, kitchen and AirCube on a side table. Air movement is illustrated.');host.append(canvas);
  const anchor=host.parentElement.querySelector('.room-device-label');
- function render(now){raf=0;if(dead||!visible||document.hidden)return;const dt=Math.min(.06,(now-last)/1000);last=now;time+=dt;progress=state.reduced?state.progress:T.MathUtils.damp(progress,state.progress,9,dt);
+ function render(now){raf=0;if(dead||!visible||document.hidden)return;const dt=Math.min(.06,(now-last)/1000);last=now;if(state.mode!=='paused')time+=dt;if(state.mode==='play'&&!state.reduced){state.progress=Math.min(.999,state.progress+dt/illustrationDuration);if(state.progress>=.999)state.mode='paused'}progress=state.reduced?state.progress:T.MathUtils.damp(progress,state.progress,9,dt);
  const chapter=Math.min(4,Math.floor(progress*5)),local=progress*5-chapter,activity=smooth(local*2);
  const walking=chapter===1?activity:chapter>1?1:0;cat.position.set(T.MathUtils.lerp(-1.7,-.78,walking),.025,1.03);cat.rotation.y=-.13;for(let i=0;i<paws.length;i++)paws[i].rotation.z=chapter===1&&!state.reduced?Math.sin(time*6+i%2*Math.PI)*.22*(1-activity):0;
  pillow.rotation.z=.18+(chapter===2?Math.sin(local*Math.PI*4)*.16*Math.sin(local*Math.PI):0);pillow.position.y=.59+(chapter===2?Math.sin(local*Math.PI*2)**2*.11:0);sash.rotation.y=chapter===3?-.48*activity:chapter>3?-.48:0;
- const show=(chapter>0?Math.min(1,activity*1.5):smooth((local-.35)*3))*(1-smooth((local-.82)/.18));particles.material.opacity=show*.45;
- const sources=[[-.6,.3,.4],[-.9,.15,1],[-1.73,.7,-.99],[-2.55,1.3,-.35],[1.65,.94,-1.42]];const origin=sources[chapter];
- for(let i=0;i<particleCount;i++){const seed=(Math.sin(i*12.9898+3)*43758.5453)%1+.5,life=((seed+(state.reduced?0:time*.065))%1+1)%1,a=i*1.74533;positions[i*3]=origin[0]+Math.cos(a+life)*(.12+life*.8)+(chapter===3?life*2.3:chapter===4?-life*.7:life*.2);positions[i*3+1]=origin[1]+life*(chapter===4?1:.65)+Math.sin(a)*.07;positions[i*3+2]=origin[2]+Math.sin(a)*life*.7+(chapter===4?life*1.1:0)}particleGeo.attributes.position.needsUpdate=true;
+ const detection=detectionPose(progress);
+ for(let source=0;source<curves.length;source++){
+  const strength=flowActivity(progress,source),head=source===3?detection.arrival:1;
+  trails[source].material.opacity=strength*(source===3?.4:.18);trails[source].geometry.setDrawRange(0,Math.max(0,Math.floor(head*80)));
+  for(let j=0;j<40;j++){
+   const i=source*40+j,life=(j/40+(state.reduced?0:time*.13))%1;
+   curves[source].getPoint(life,flowPoint);const spread=source===3?.045:.09,a=j*2.399;
+   positions[i*3]=flowPoint.x+Math.cos(a+life*2)*spread;positions[i*3+1]=flowPoint.y+Math.sin(a)*spread;positions[i*3+2]=flowPoint.z+Math.sin(a+life)*spread;
+   opacities[i]=strength*Math.sin(Math.PI*life)*(life<=head?1:0);
+  }
+ }
+ particleGeo.attributes.position.needsUpdate=true;particleGeo.attributes.aOpacity.needsUpdate=true;
+ pulse.scale.setScalar(1+(state.reduced?0:(time*.65)%1)*1.8);pulse.material.opacity=detection.sensing*(state.reduced?.65:.7*(1-(time*.65)%1));
  const target=new T.Vector3(-.15,1.05,0),aspect=host.clientWidth/host.clientHeight,span=innerWidth<700?6.4:6;const vertical=Math.max(span/aspect,5.7);camera.left=-vertical*aspect/2;camera.right=vertical*aspect/2;camera.top=vertical/2;camera.bottom=-vertical/2;camera.position.set(5,4.4,6.8);if(!state.reduced){camera.position.x-=progress*.3;target.z+=progress*.07}camera.lookAt(target);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  const point=new T.Vector3(.53,.57,.8).project(camera);anchor.style.left=`${(point.x*.5+.5)*host.clientWidth}px`;anchor.style.top=`${(-point.y*.5+.5)*host.clientHeight}px`;
  // Only a verified VOC scene may illustrate the light changing; particle-only scenes do not drive it.
- const response=chapter===4?smooth(local*3)*(1-smooth((local-.7)/.3)):0;const tint=new T.Color('#91d980').lerp(new T.Color('#e6bd61'),response);diffuser.material.emissive.lerp(tint,state.reduced?1:1-Math.exp(-dt*4));
- renderer.render(scene,camera);host.dataset.chapter=chapter;host.dataset.ready='true';host.dataset.progress=progress.toFixed(3);host.parentElement.classList.add('room-ready');onReady?.(chapter,local);
- if(!state.reduced||Math.abs(progress-state.progress)>.001)raf=requestAnimationFrame(render);
+ const response=detection.response;const tint=new T.Color('#91d980').lerp(new T.Color('#e6bd61'),response);diffuser.material.emissive.copy(tint);diffuser.material.color.copy(new T.Color('#f5f1df').lerp(tint,.55));
+ renderer.render(scene,camera);host.dataset.detection=detection.phase;host.dataset.response=response.toFixed(3);host.dataset.chapter=chapter;host.dataset.ready='true';host.dataset.progress=progress.toFixed(3);host.parentElement.classList.add('room-ready');onReady?.(chapter,local,detection);
+ if((!state.reduced&&state.mode!=='paused')||Math.abs(progress-state.progress)>.001)raf=requestAnimationFrame(render);
  }
  function wake(){if(!raf&&!dead&&visible&&!document.hidden){last=performance.now();raf=requestAnimationFrame(render)}}
  function resize(){if(!host.clientWidth||!host.clientHeight)return;renderer.setSize(host.clientWidth,host.clientHeight);wake()}
