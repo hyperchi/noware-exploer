@@ -3,7 +3,7 @@
 export const roomChapters=[
  {name:'The room',title:'You can’t see most of what’s in your air.',body:'A room can look exactly the same while its air changes. Noware continuously monitors VOCs, temperature, and humidity.',signal:'VOC monitoring',status:'Continuous'},
  {name:'Pets',title:'Pets change the air around them.',body:'Everyday movement can stir particles into the air. The particles shown here are illustrative; Noware does not count particles or identify allergens.',signal:'VOC monitoring',status:'Continuous'},
- {name:'Dust',title:'Dust doesn’t stay on the floor.',body:'Disturb a cushion and particles can become airborne. This is an environmental illustration, not a particle reading from Noware.',signal:'VOC monitoring',status:'Continuous'},
+ {name:'Dust',title:'Dust doesn’t stay on the floor.',body:'For allergy-conscious homes, humidity matters. Excess moisture can encourage mold and dust mites. Noware tracks humidity—it doesn’t detect allergens or prevent allergies.',signal:'VOC monitoring',status:'Continuous'},
  {name:'The window',title:'Outside air becomes inside air.',body:'Opening a window changes the air moving through a room. Noware monitors VOC conditions; it does not identify outdoor particles.',signal:'VOC monitoring',status:'Continuous'},
  {name:'Cooking',title:'Cooking can change your air in minutes.',body:'Cooking can release VOCs. Noware responds to changes in these gases with a color-coded light, helping you notice when conditions change.',signal:'VOC indication',status:'Change illustrated'},
 ];
