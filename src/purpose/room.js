@@ -57,7 +57,7 @@ export async function createRoom(host,state,onReady){
  const diffuser=product.getObjectByName('diffuser');diffuser.material.dispose();diffuser.material=new T.MeshPhysicalMaterial({color:'#c8dfb9',roughness:.5,transmission:.08,thickness:.0013,emissive:'#91d980',emissiveIntensity:.3});
  const canvas=renderer.domElement;canvas.setAttribute('role','img');canvas.setAttribute('aria-label','A shared living room with a sofa, cat, openable window, kitchen and Noware on a side table. Air movement is illustrated.');host.append(canvas);
  const anchor=host.parentElement.querySelector('.room-device-label');
- function render(now){raf=0;if(dead||!visible||document.hidden)return;const dt=Math.min(.06,(now-last)/1000);last=now;if(state.mode!=='paused')time+=dt;if(state.mode==='play'&&!state.reduced){state.progress=Math.min(.999,state.progress+dt/illustrationDuration);if(state.progress>=.999)state.mode='paused'}progress=state.reduced?state.progress:T.MathUtils.damp(progress,state.progress,9,dt);
+ function render(now){raf=0;if(dead||!visible||document.hidden)return;const dt=Math.max(0,Math.min(.06,(now-last)/1000));last=now;if(state.mode!=='paused')time+=dt;if(state.mode==='play'&&!state.reduced){state.progress=Math.min(.999,state.progress+dt/illustrationDuration);if(state.progress>=.999)state.mode='paused'}progress=state.reduced?state.progress:T.MathUtils.damp(progress,state.progress,9,dt);
  const chapter=Math.min(4,Math.floor(progress*5)),local=progress*5-chapter,activity=smooth(local*2);
  const walking=chapter===1?activity:chapter>1?1:0;cat.position.set(T.MathUtils.lerp(-1.7,-.78,walking),.025,1.03);cat.rotation.y=-.13;for(let i=0;i<paws.length;i++)paws[i].rotation.z=chapter===1&&!state.reduced?Math.sin(time*6+i%2*Math.PI)*.22*(1-activity):0;
  pillow.rotation.z=.18+(chapter===2?Math.sin(local*Math.PI*4)*.16*Math.sin(local*Math.PI):0);pillow.position.y=.59+(chapter===2?Math.sin(local*Math.PI*2)**2*.11:0);sash.rotation.y=chapter===3?-.48*activity:chapter>3?-.48:0;
@@ -66,7 +66,7 @@ export async function createRoom(host,state,onReady){
   const strength=flowActivity(progress,source),head=source===3?detection.arrival:1;
   trails[source].material.opacity=strength*(source===3?.4:.18);trails[source].geometry.setDrawRange(0,Math.max(0,Math.floor(head*80)));
   for(let j=0;j<40;j++){
-   const i=source*40+j,life=(j/40+(state.reduced?0:time*.13))%1;
+   const i=source*40+j,life=((j/40+(state.reduced?0:time*.13))%1+1)%1;
    curves[source].getPoint(life,flowPoint);const spread=source===3?.045:.09,a=j*2.399;
    positions[i*3]=flowPoint.x+Math.cos(a+life*2)*spread;positions[i*3+1]=flowPoint.y+Math.sin(a)*spread;positions[i*3+2]=flowPoint.z+Math.sin(a+life)*spread;
    opacities[i]=strength*Math.sin(Math.PI*life)*(life<=head?1:0);
