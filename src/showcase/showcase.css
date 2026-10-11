@@ -186,14 +186,9 @@
  .hardware-sticky::before { mask-image: linear-gradient(#0007,transparent 55%); }
 }
 
-/* Made in America: unmistakable. A solid blue badge in the hero kicker, and the
- * closing headline's second line in the brand blue. */
-.hardware-kicker {
- display: inline-flex; align-items: center; gap: 8px;
- padding: 8px 12px; background: #2563eb; color: #ffffff;
- font-size: 10px; font-weight: 600; letter-spacing: 2.2px;
-}
-.hardware-kicker > span { width: 6px; height: 6px; background: #ffffff; }
+/* Made in America in the brand blue: bold blue kicker in the hero, blue second
+ * line in the closing headline. */
+.hardware-kicker { color: #2563eb; font-size: 10px; font-weight: 700; letter-spacing: 2.2px; }
+.hardware-kicker > span { width: 6px; height: 6px; }
 .hardware-origin h2 > span { color: #3b82f6; }
 .origin-eyebrow { color: #93c5fd; }
-@media(max-width:700px) { .hardware-kicker { font-size: 9px; padding: 7px 10px; } }
