@@ -31,7 +31,7 @@ export async function createRoom(host,state,onReady){
  box(.23,.02,.17,-.94,.393,.5,materials.ivory,.005);box(.22,.015,.16,-.91,.412,.52,materials.pillow,.005);
  box(.7,.72,.035,-1.05,1.8,-1.86,materials.wood,.012);box(.64,.66,.012,-1.05,1.8,-1.833,materials.ivory,.003);
  const printLine=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(-1.25,1.67,-1.822),new T.Vector3(-1.04,1.95,-1.822),new T.Vector3(-.86,1.73,-1.822)]),new T.LineBasicMaterial({color:'#a8b0a0'}));scene.add(printLine);
- // Natural placement: AirCube on a small table at the room's near edge.
+ // Natural placement: NOWARE on a small table at the room's near edge.
  cylinder(.29,.29,.055,.53,.49,.8,materials.wood);cylinder(.035,.055,.46,.53,.23,.8,materials.wood);
  tube([[.52,.52,.79],[.38,.505,.76],[.28,.46,.77],[.27,.12,.79],[.3,.014,.97],[.7,.013,1.4]],.003,materials.ivory);
  const plant=new T.Group();plant.position.set(-2.25,0,-1.55);scene.add(plant);cylinder(.15,.1,.25,0,.125,0,materials.ivory,plant);for(let i=0;i<7;i++){const a=i*2.4,tip=[Math.sin(a)*.22,.75+(i%3)*.16,Math.cos(a)*.22];tube([[0,.2,0],[tip[0]*.5,.5,tip[2]*.5],tip],.008,materials.leaf,plant);const leaf=ball(.09,.2,.025,...tip,materials.leaf,plant);leaf.rotation.z=Math.sin(a)*.7;leaf.rotation.y=a}
@@ -55,7 +55,7 @@ export async function createRoom(host,state,onReady){
  let product;try{product=(await new GLTFLoader().loadAsync('/showcase/aircube-base.glb')).scene;}catch(error){dispose();throw error}
  product.scale.setScalar(.001);product.position.set(.53,.518,.8);product.rotation.y=.3;product.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=true});scene.add(product);
  const diffuser=product.getObjectByName('diffuser');diffuser.material.dispose();diffuser.material=new T.MeshPhysicalMaterial({color:'#c8dfb9',roughness:.5,transmission:.08,thickness:.0013,emissive:'#91d980',emissiveIntensity:.3});
- const canvas=renderer.domElement;canvas.setAttribute('role','img');canvas.setAttribute('aria-label','A shared living room with a sofa, cat, openable window, kitchen and AirCube on a side table. Air movement is illustrated.');host.append(canvas);
+ const canvas=renderer.domElement;canvas.setAttribute('role','img');canvas.setAttribute('aria-label','A shared living room with a sofa, cat, openable window, kitchen and NOWARE on a side table. Air movement is illustrated.');host.append(canvas);
  const anchor=host.parentElement.querySelector('.room-device-label');
  function render(now){raf=0;if(dead||!visible||document.hidden)return;const dt=Math.min(.06,(now-last)/1000);last=now;if(state.mode!=='paused')time+=dt;if(state.mode==='play'&&!state.reduced){state.progress=Math.min(.999,state.progress+dt/illustrationDuration);if(state.progress>=.999)state.mode='paused'}progress=state.reduced?state.progress:T.MathUtils.damp(progress,state.progress,9,dt);
  const chapter=Math.min(4,Math.floor(progress*5)),local=progress*5-chapter,activity=smooth(local*2);
