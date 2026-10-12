@@ -33,3 +33,6 @@ Customer-facing copy now uses design-intent language and a discreet Interactive 
 
 ### Loading and layout stability
 `node scripts/purpose/stability.mjs` delays GLB loading, verifies the callout stays hidden until its first correctly positioned frame, checks its stationary position during animation, and exercises mobile/desktop resizing. Frame deltas are clamped nonnegative to prevent early rAF timestamps from producing negative particle-path parameters. Canvas resize and redraw happen in the same frame, and room camera drift is removed.
+
+### Refresh framing and original closing section
+Room stage proportions are fixed per breakpoint to match the fallback renders. The hero camera fits the poster’s reference aspect (`settings.posterAspect` in `src/showcase/config.js`), with no independent mobile camera-distance multiplier. The hero poster stays until the first rendered frame; resizing redraws atomically. `scripts/purpose/framing.mjs` and `scripts/showcase/framing.mjs` compare rendered object bounds with posters and repeat after refresh at five viewport sizes. Regenerate the hero poster with `node scripts/showcase/poster.mjs`. The original `.hardware-origin` closing section is preserved after the size comparison, including its blue Made in America styling.
