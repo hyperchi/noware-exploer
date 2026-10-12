@@ -6,7 +6,7 @@ import {roomFlowPaths,flowActivity,detectionPose,illustrationDuration} from './f
 const smooth=x=>{x=T.MathUtils.clamp(x,0,1);return x*x*(3-2*x)};
 export async function createRoom(host,state,onReady){
  const renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setClearColor('#fff',0);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;
- const scene=new T.Scene(),camera=new T.OrthographicCamera(-3,3,2,-2,.01,60);let resizeObserver,observer;let dead=false,visible=false,raf=0,last=performance.now(),time=0,progress=state.progress;
+ const scene=new T.Scene(),camera=new T.OrthographicCamera(-3,3,2,-2,.01,60);let resizeObserver,observer;let dead=false,visible=false,raf=0,last=performance.now(),time=0,progress=state.progress,renderWidth=0,renderHeight=0;
  const envMaker=new T.PMREMGenerator(renderer),studio=new RoomEnvironment(),env=envMaker.fromScene(studio,.04);scene.environment=env.texture;scene.environmentIntensity=.35;studio.dispose();envMaker.dispose();
  const materials={wall:new T.MeshStandardMaterial({color:'#f7f5ef',roughness:.9}),floor:new T.MeshStandardMaterial({color:'#e5ddd0',roughness:.82}),fabric:new T.MeshStandardMaterial({color:'#c7c6b9',roughness:.96}),pillow:new T.MeshStandardMaterial({color:'#b0b6a0',roughness:1}),wood:new T.MeshStandardMaterial({color:'#a98b68',roughness:.65}),ivory:new T.MeshStandardMaterial({color:'#f4f0e6',roughness:.7}),metal:new T.MeshStandardMaterial({color:'#5e6463',metalness:.7,roughness:.32}),glass:new T.MeshPhysicalMaterial({color:'#e6eff3',transmission:.25,transparent:true,opacity:.25,roughness:.2}),leaf:new T.MeshStandardMaterial({color:'#6d8065',roughness:.9}),fur:new T.MeshStandardMaterial({color:'#b89d80',roughness:1})};
  function box(w,h,d,x,y,z,mat,r=.025,parent=scene){const o=new T.Mesh(new RoundedBoxGeometry(w,h,d,2,Math.min(r,w/3,h/3,d/3)),mat);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;parent.add(o);return o}
@@ -56,14 +56,19 @@ export async function createRoom(host,state,onReady){
  product.scale.setScalar(.001);product.position.set(.53,.518,.8);product.rotation.y=.3;product.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=true});scene.add(product);
  const diffuser=product.getObjectByName('diffuser');diffuser.material.dispose();diffuser.material=new T.MeshPhysicalMaterial({color:'#c8dfb9',roughness:.5,transmission:.08,thickness:.0013,emissive:'#91d980',emissiveIntensity:.3});
  const canvas=renderer.domElement;canvas.setAttribute('role','img');canvas.setAttribute('aria-label','A shared living room with a sofa, cat, openable window, kitchen and Noware on a side table. Air movement is illustrated.');host.append(canvas);
- const anchor=host.parentElement.querySelector('.room-device-label');
- function render(now){raf=0;if(dead||!visible||document.hidden)return;const dt=Math.max(0,Math.min(.06,(now-last)/1000));last=now;if(state.mode!=='paused')time+=dt;if(state.mode==='play'&&!state.reduced){state.progress=Math.min(.999,state.progress+dt/illustrationDuration);if(state.progress>=.999)state.mode='paused'}progress=state.reduced?state.progress:T.MathUtils.damp(progress,state.progress,9,dt);
+ const anchor=host.parentElement.querySelector('.room-device-label'),leader=host.parentElement.querySelector('.room-device-leader');
+ function render(now){raf=0;if(dead||!visible||document.hidden)return;
+ // Resize and redraw in the same frame; setSize clears the drawing buffer.
+ const width=host.clientWidth,height=host.clientHeight;if(!width||!height)return;
+ if(width!==renderWidth||height!==renderHeight){renderer.setSize(width,height,false);renderWidth=width;renderHeight=height}
+ const dt=Math.max(0,Math.min(.06,(now-last)/1000));last=now;if(state.mode!=='paused')time+=dt;if(state.mode==='play'&&!state.reduced){state.progress=Math.min(.999,state.progress+dt/illustrationDuration);if(state.progress>=.999)state.mode='paused'}progress=state.reduced?state.progress:T.MathUtils.damp(progress,state.progress,9,dt);
  const chapter=Math.min(4,Math.floor(progress*5)),local=progress*5-chapter,activity=smooth(local*2);
  const walking=chapter===1?activity:chapter>1?1:0;cat.position.set(T.MathUtils.lerp(-1.7,-.78,walking),.025,1.03);cat.rotation.y=-.13;for(let i=0;i<paws.length;i++)paws[i].rotation.z=chapter===1&&!state.reduced?Math.sin(time*6+i%2*Math.PI)*.22*(1-activity):0;
  pillow.rotation.z=.18+(chapter===2?Math.sin(local*Math.PI*4)*.16*Math.sin(local*Math.PI):0);pillow.position.y=.59+(chapter===2?Math.sin(local*Math.PI*2)**2*.11:0);sash.rotation.y=chapter===3?-.48*activity:chapter>3?-.48:0;
  const detection=detectionPose(progress);
  for(let source=0;source<curves.length;source++){
-  const strength=flowActivity(progress,source),head=source===3?detection.arrival:1;
+  // Keep ambient trails continuous across chapter boundaries; sensing has its own timing.
+  const strength=flowActivity(progress,source),head=source===3?smooth((progress-.74)/.1):1;
   trails[source].material.opacity=strength*(source===3?.4:.18);trails[source].geometry.setDrawRange(0,Math.max(0,Math.floor(head*80)));
   for(let j=0;j<40;j++){
    const i=source*40+j,life=((j/40+(state.reduced?0:time*.13))%1+1)%1;
@@ -74,15 +79,19 @@ export async function createRoom(host,state,onReady){
  }
  particleGeo.attributes.position.needsUpdate=true;particleGeo.attributes.aOpacity.needsUpdate=true;
  pulse.scale.setScalar(1+(state.reduced?0:(time*.65)%1)*1.8);pulse.material.opacity=detection.sensing*(state.reduced?.65:.7*(1-(time*.65)%1));
- const target=new T.Vector3(-.15,1.05,0),aspect=host.clientWidth/host.clientHeight,span=innerWidth<700?6.4:6;const vertical=Math.max(span/aspect,5.7);camera.left=-vertical*aspect/2;camera.right=vertical*aspect/2;camera.top=vertical/2;camera.bottom=-vertical/2;camera.position.set(5,4.4,6.8);if(!state.reduced){camera.position.x-=progress*.3;target.z+=progress*.07}camera.lookAt(target);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
- const point=new T.Vector3(.53,.57,.8).project(camera);anchor.style.left=`${(point.x*.5+.5)*host.clientWidth}px`;anchor.style.top=`${(-point.y*.5+.5)*host.clientHeight}px`;
- // Only a verified VOC scene may illustrate the light changing; particle-only scenes do not drive it.
+ const target=new T.Vector3(-.15,1.05,0),aspect=host.clientWidth/host.clientHeight,span=innerWidth<700?6.4:6;const vertical=Math.max(span/aspect,5.7);camera.left=-vertical*aspect/2;camera.right=vertical*aspect/2;camera.top=vertical/2;camera.bottom=-vertical/2;camera.position.set(5,4.4,6.8);camera.lookAt(target);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
+ const point=new T.Vector3(.53,.57,.8).project(camera),px=(point.x*.5+.5)*host.clientWidth,py=(-point.y*.5+.5)*host.clientHeight;
+ const labelX=Math.min(host.clientWidth-anchor.offsetWidth-12,px+38),labelY=Math.max(12,py-118);
+ anchor.style.left=`${labelX}px`;anchor.style.top=`${labelY}px`;
+ leader.querySelector('path').setAttribute('d',`M ${px} ${py} L ${px} ${py-18} L ${labelX+18} ${labelY+anchor.offsetHeight}`);
+ leader.querySelector('circle').setAttribute('cx',px);leader.querySelector('circle').setAttribute('cy',py);
+ // Owner-confirmed particle revision; illustrative response, not measured data.
  const response=detection.response;const tint=new T.Color('#91d980').lerp(new T.Color('#e6bd61'),response);diffuser.material.emissive.copy(tint);diffuser.material.color.copy(new T.Color('#f5f1df').lerp(tint,.55));
  renderer.render(scene,camera);host.dataset.detection=detection.phase;host.dataset.response=response.toFixed(3);host.dataset.chapter=chapter;host.dataset.ready='true';host.dataset.progress=progress.toFixed(3);host.parentElement.classList.add('room-ready');onReady?.(chapter,local,detection);
  if((!state.reduced&&state.mode!=='paused')||Math.abs(progress-state.progress)>.001)raf=requestAnimationFrame(render);
  }
  function wake(){if(!raf&&!dead&&visible&&!document.hidden){last=performance.now();raf=requestAnimationFrame(render)}}
- function resize(){if(!host.clientWidth||!host.clientHeight)return;renderer.setSize(host.clientWidth,host.clientHeight);wake()}
+ function resize(){wake()}
  resizeObserver=new ResizeObserver(resize);resizeObserver.observe(host);observer=new IntersectionObserver(([e])=>{visible=e.isIntersecting;if(visible)wake();else{cancelAnimationFrame(raf);raf=0}},{rootMargin:'50px'});observer.observe(host);
  function visibility(){if(document.hidden){cancelAnimationFrame(raf);raf=0}else wake()}document.addEventListener('visibilitychange',visibility);resize();
  function dispose(){dead=true;cancelAnimationFrame(raf);resizeObserver?.disconnect();observer?.disconnect();document.removeEventListener('visibilitychange',visibility);const gs=new Set(),ms=new Set(),ts=new Set();scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:o.material?[o.material]:[]){ms.add(m);for(const v of Object.values(m))if(v?.isTexture)ts.add(v)}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());env.dispose();renderer.dispose();renderer.domElement.remove()}

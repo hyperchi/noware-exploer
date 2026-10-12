@@ -14,9 +14,12 @@ export function flowActivity(progress,source){
  return ease((progress-start)/.065)*(1-ease((progress-end)/.065));
 }
 export function detectionPose(progress){
- const arrival=ease((progress-.74)/.1);
- const sensing=ease((progress-.84)/.025)*(1-ease((progress-.95)/.05));
- const response=ease((progress-.865)/.045)*(1-ease((progress-.95)/.05));
- const phase=progress<.74?'monitoring':progress<.84?'air':progress<.865?'sensing':progress<.95?'signal':'settling';
+ // One reversible arrival → sensing → response → recovery per everyday event.
+ const source=Math.max(0,Math.min(3,Math.floor(progress*5)-1));
+ const local=progress-source*.2;
+ const arrival=ease((local-.2)/.04);
+ const sensing=ease((local-.24)/.025)*(1-ease((local-.35)/.05));
+ const response=ease((local-.265)/.045)*(1-ease((local-.35)/.05));
+ const phase=progress<.2?'monitoring':local<.24?'air':local<.265?'sensing':local<.35?'signal':'settling';
  return {arrival,sensing,response,phase};
 }

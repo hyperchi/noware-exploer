@@ -17,8 +17,15 @@ for(const mobile of [false,true]){
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Horizontal overflow');console.log('Passed',mobile?'mobile':'desktop','room chapters, keyboard, no overflow, both size disclosures');await page.close();
 }
 const page=await browser.newPage({viewport:{width:1440,height:900}});page.on('pageerror',e=>errors.push(e.message));await page.goto(url);await page.locator('#what-it-does').scrollIntoViewIfNeeded();await expect(page.locator('.room-canvas')).toHaveAttribute('data-ready','true');
-await page.locator('.room-resume').click();
-for(const [progress,chapter] of [[.08,0],[.28,1],[.48,2],[.68,3],[.88,4],[.48,2],[.08,0]]){await page.evaluate(progress=>{const s=document.querySelector('.room-scroll'),sticky=document.querySelector('.room-sticky');scrollTo(0,s.getBoundingClientRect().top+scrollY+(s.offsetHeight-sticky.offsetHeight)*progress-16)},progress);await expect(page.locator('.room-canvas')).toHaveAttribute('data-chapter',String(chapter));await page.waitForTimeout(220)}
+// Scrolling moves the illustration normally instead of holding it in place.
+await page.locator('.room-stage').scrollIntoViewIfNeeded();
+const before=await page.locator('.room-stage').boundingBox();
+await page.evaluate(()=>scrollBy(0,240));await page.waitForTimeout(100);
+const after=await page.locator('.room-stage').boundingBox();
+expect(Math.abs(before.y-after.y-240)).toBeLessThan(2);
+expect(await page.locator('.room-sticky').evaluate(e=>getComputedStyle(e).position)).toBe('relative');
+await page.evaluate(()=>scrollBy(0,-240));await page.waitForTimeout(100);
+expect(Math.abs((await page.locator('.room-stage').boundingBox()).y-before.y)).toBeLessThan(2);
 await page.locator('[data-room-chapter="1"]').click();await page.waitForTimeout(350);await page.locator('.room-stage').screenshot({path:'captures/purpose/pet-motion-early.png'});await page.waitForTimeout(400);await page.locator('.room-stage').screenshot({path:'captures/purpose/pet-motion-late.png'});
-console.log('Passed forward and reverse scroll through the same room.');await page.close();await browser.close();
+console.log('Passed normal forward and reverse scrolling without pinning.');await page.close();await browser.close();
 for(const [path,data] of posters)fs.writeFileSync(path,Buffer.from(data,'base64'));if(errors.length)throw Error(errors.join('\n'));

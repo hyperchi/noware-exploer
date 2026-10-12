@@ -1,10 +1,9 @@
-// Particle sensing is NOT present in the documented Base hardware.
-// Keep environmental illustrations distinct from the device's verified VOC response.
+// Owner confirms PM2.5 is in development; sensor model/specifications are not finalized.
 export const roomChapters=[
- {name:'The room',title:'You can’t see most of what’s in your air.',body:'A room can look exactly the same while its air changes. Noware continuously monitors VOCs, temperature, and humidity.',signal:'VOC monitoring',status:'Continuous'},
- {name:'Pets',title:'Pets change the air around them.',body:'Everyday movement can stir particles into the air. The particles shown here are illustrative; Noware does not count particles or identify allergens.',signal:'VOC monitoring',status:'Continuous'},
- {name:'Dust',title:'Dust doesn’t stay on the floor.',body:'For allergy-conscious homes, humidity matters. Excess moisture can encourage mold and dust mites. Noware tracks humidity—it doesn’t detect allergens or prevent allergies.',signal:'VOC monitoring',status:'Continuous'},
- {name:'The window',title:'Outside air becomes inside air.',body:'Opening a window changes the air moving through a room. Noware monitors VOC conditions; it does not identify outdoor particles.',signal:'VOC monitoring',status:'Continuous'},
- {name:'Cooking',title:'Cooking can change your air in minutes.',body:'Cooking can release VOCs. Noware responds to changes in these gases with a color-coded light, helping you notice when conditions change.',signal:'VOC indication',status:'Change illustrated'},
+ {name:'The room',title:'You can’t see most of what’s in your air.',body:'A room can look exactly the same while its air changes. Explore the fine-particle changes behind everyday moments.',signal:'PM2.5 activity',status:'Interactive demo'},
+ {name:'Pets',title:'Pets change the air around them.',body:'Everyday movement can stir particles into the air. Follow the change in this illustration, without identifying specific allergens or their source.',signal:'PM2.5 activity',status:'Interactive demo'},
+ {name:'Dust',title:'Dust doesn’t stay on the floor.',body:'Disturb a cushion and particles can become airborne. For allergy-conscious homes, Noware is designed to make fine-particle changes easier to notice—it doesn’t identify allergens or prevent allergies.',signal:'PM2.5 activity',status:'Interactive demo'},
+ {name:'The window',title:'Outside air becomes inside air.',body:'An open window can let outdoor particles inside. See a rise in fine particles reflected in the illustrated response.',signal:'PM2.5 activity',status:'Interactive demo'},
+ {name:'Cooking',title:'Cooking can change your air in minutes.',body:'Cooking can release airborne particles. Follow a PM2.5 response as levels rise—and an indication that settles as they fall.',signal:'PM2.5 activity',status:'Change illustrated'},
 ];
 export const roomChapterAt=p=>Math.min(roomChapters.length-1,Math.floor(Math.max(0,Math.min(1,p))*roomChapters.length));

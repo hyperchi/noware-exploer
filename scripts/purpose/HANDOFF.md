@@ -16,9 +16,23 @@ Run `npm run dev -- --port 5177`; open http://localhost:5177/home.html#what-it-d
 
 Build: `npm run build`; tests: `npm test`. No lint/typecheck script exists. Existing shared Three.js bundle-size warning remains. Chrome headless validates layout and behavior, not physical-device frame rate.
 
-Important unresolved product-specification issue: current Base hardware has no documented particulate sensor. Requested numeric PM2.5 demonstrations and allergy-detection implications are not shipped in this version. The room/environment story is implemented, but those product claims require verified hardware support. See the asset README for sources and exact limitations.
+The owner confirmed a particle-sensing Noware revision on 2026-10-11. Room copy now explains generic particle changes. Sensor model, PM2.5 support, thresholds, and revised internal CAD remain unconfirmed. The existing hero/room GLB still represents the earlier assembly; no new sensor geometry is invented. See the asset README for the remaining boundaries.
 
 ## Continuous illustration update
-The same room now plays once over 24 seconds when visible. Four overlapping air paths keep continuity between activities; the cooking example stages ambient-air arrival, a VOC sensing pulse, a delayed light response, and recovery. Pause/play and replay are available. Chapter controls skip within the same scene; Follow scroll explicitly hands progress to reversible scrolling. Reduced motion uses static chapter poses. Offscreen/hidden rendering pauses.
+The same room now plays once over 24 seconds when visible. Four overlapping air paths keep continuity between activities; each event stages ambient-air arrival, a particle sensing pulse, a delayed light response, and recovery. Pause/play and replay are available. Chapter controls skip within the same scene; Follow scroll explicitly hands progress to reversible scrolling. Reduced motion uses static chapter poses. Offscreen/hidden rendering pauses.
 
-`src/purpose/flow.js` controls duration, source paths, overlap, and response timing. `room.js` controls particle visibility, the pulse, and materials. `tests/room-flow.test.js` checks overlapping source activity and detection ordering. `scripts/purpose/playback.mjs` verifies browser playback and captures the response. The visual paths and response timing are illustrative, not modeled gas transport or measured sensor latency.
+`src/purpose/flow.js` controls duration, source paths, overlap, and response timing. `room.js` controls particle visibility, the pulse, and materials. `tests/room-flow.test.js` checks overlapping source activity and detection ordering. `scripts/purpose/playback.mjs` verifies browser playback and captures the response. The visual paths and response timing are illustrative, not modeled particle transport or measured sensor latency.
+
+### Latest owner clarification — PM2.5 in development
+The owner subsequently clarified that PM2.5 sensing is still being developed, with the final sensor model and specifications undecided. Public copy therefore identifies this as a PM2.5 feature preview in development, rather than a shipping capability. No “high-end,” accuracy, certification, numeric concentration, threshold, or allergy-prevention claim is made. Earlier generic particle confirmation above is superseded by this development status.
+
+### Normal page scrolling
+Removed the room’s 250vh scroll track, sticky positioning, and Follow scroll mode. This section now occupies its natural content height. Playback and chapters remain independent of scrolling, with offscreen pause and reduced-motion support. Restored the fuller overlapping ambient trails from before the PM2.5 update. The existing hero choreography is unchanged.
+
+Customer-facing copy now uses design-intent language and a discreet Interactive demo label instead of development-status wording. Engineering status is unchanged: the owner’s particle sensor selection/specifications are not finalized. Do not introduce numerical accuracy, certification, or medical claims without evidence.
+
+### Loading and layout stability
+`node scripts/purpose/stability.mjs` delays GLB loading, verifies the callout stays hidden until its first correctly positioned frame, checks its stationary position during animation, and exercises mobile/desktop resizing. Frame deltas are clamped nonnegative to prevent early rAF timestamps from producing negative particle-path parameters. Canvas resize and redraw happen in the same frame, and room camera drift is removed.
+
+### Refresh framing and original closing section
+Room stage proportions are fixed per breakpoint to match the fallback renders. The hero camera fits the poster’s reference aspect (`settings.posterAspect` in `src/showcase/config.js`), with no independent mobile camera-distance multiplier. The hero poster stays until the first rendered frame; resizing redraws atomically. `scripts/purpose/framing.mjs` and `scripts/showcase/framing.mjs` compare rendered object bounds with posters and repeat after refresh at five viewport sizes. Regenerate the hero poster with `node scripts/showcase/poster.mjs`. The original `.hardware-origin` closing section is preserved after the size comparison, including its blue Made in America styling.
