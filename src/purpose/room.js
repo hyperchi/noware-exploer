@@ -63,7 +63,8 @@ export async function createRoom(host,state,onReady){
  pillow.rotation.z=.18+(chapter===2?Math.sin(local*Math.PI*4)*.16*Math.sin(local*Math.PI):0);pillow.position.y=.59+(chapter===2?Math.sin(local*Math.PI*2)**2*.11:0);sash.rotation.y=chapter===3?-.48*activity:chapter>3?-.48:0;
  const detection=detectionPose(progress);
  for(let source=0;source<curves.length;source++){
-  const strength=flowActivity(progress,source),head=smooth((progress-(.2+source*.2))/.04);
+  // Keep ambient trails continuous across chapter boundaries; sensing has its own timing.
+  const strength=flowActivity(progress,source),head=source===3?smooth((progress-.74)/.1):1;
   trails[source].material.opacity=strength*(source===3?.4:.18);trails[source].geometry.setDrawRange(0,Math.max(0,Math.floor(head*80)));
   for(let j=0;j<40;j++){
    const i=source*40+j,life=(j/40+(state.reduced?0:time*.13))%1;

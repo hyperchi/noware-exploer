@@ -25,3 +25,6 @@ The same room now plays once over 24 seconds when visible. Four overlapping air 
 
 ### Latest owner clarification — PM2.5 in development
 The owner subsequently clarified that PM2.5 sensing is still being developed, with the final sensor model and specifications undecided. Public copy therefore identifies this as a PM2.5 feature preview in development, rather than a shipping capability. No “high-end,” accuracy, certification, numeric concentration, threshold, or allergy-prevention claim is made. Earlier generic particle confirmation above is superseded by this development status.
+
+### Normal page scrolling
+Removed the room’s 250vh scroll track, sticky positioning, and Follow scroll mode. This section now occupies its natural content height. Playback and chapters remain independent of scrolling, with offscreen pause and reduced-motion support. Restored the fuller overlapping ambient trails from before the PM2.5 update. The existing hero choreography is unchanged.
