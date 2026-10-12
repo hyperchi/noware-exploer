@@ -56,7 +56,7 @@ export async function createRoom(host,state,onReady){
  product.scale.setScalar(.001);product.position.set(.53,.518,.8);product.rotation.y=.3;product.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=true});scene.add(product);
  const diffuser=product.getObjectByName('diffuser');diffuser.material.dispose();diffuser.material=new T.MeshPhysicalMaterial({color:'#c8dfb9',roughness:.5,transmission:.08,thickness:.0013,emissive:'#91d980',emissiveIntensity:.3});
  const canvas=renderer.domElement;canvas.setAttribute('role','img');canvas.setAttribute('aria-label','A shared living room with a sofa, cat, openable window, kitchen and Noware on a side table. Air movement is illustrated.');host.append(canvas);
- const anchor=host.parentElement.querySelector('.room-device-label');
+ const anchor=host.parentElement.querySelector('.room-device-label'),leader=host.parentElement.querySelector('.room-device-leader');
  function render(now){raf=0;if(dead||!visible||document.hidden)return;const dt=Math.min(.06,(now-last)/1000);last=now;if(state.mode!=='paused')time+=dt;if(state.mode==='play'&&!state.reduced){state.progress=Math.min(.999,state.progress+dt/illustrationDuration);if(state.progress>=.999)state.mode='paused'}progress=state.reduced?state.progress:T.MathUtils.damp(progress,state.progress,9,dt);
  const chapter=Math.min(4,Math.floor(progress*5)),local=progress*5-chapter,activity=smooth(local*2);
  const walking=chapter===1?activity:chapter>1?1:0;cat.position.set(T.MathUtils.lerp(-1.7,-.78,walking),.025,1.03);cat.rotation.y=-.13;for(let i=0;i<paws.length;i++)paws[i].rotation.z=chapter===1&&!state.reduced?Math.sin(time*6+i%2*Math.PI)*.22*(1-activity):0;
@@ -75,7 +75,11 @@ export async function createRoom(host,state,onReady){
  particleGeo.attributes.position.needsUpdate=true;particleGeo.attributes.aOpacity.needsUpdate=true;
  pulse.scale.setScalar(1+(state.reduced?0:(time*.65)%1)*1.8);pulse.material.opacity=detection.sensing*(state.reduced?.65:.7*(1-(time*.65)%1));
  const target=new T.Vector3(-.15,1.05,0),aspect=host.clientWidth/host.clientHeight,span=innerWidth<700?6.4:6;const vertical=Math.max(span/aspect,5.7);camera.left=-vertical*aspect/2;camera.right=vertical*aspect/2;camera.top=vertical/2;camera.bottom=-vertical/2;camera.position.set(5,4.4,6.8);if(!state.reduced){camera.position.x-=progress*.3;target.z+=progress*.07}camera.lookAt(target);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
- const point=new T.Vector3(.53,.57,.8).project(camera);anchor.style.left=`${(point.x*.5+.5)*host.clientWidth}px`;anchor.style.top=`${(-point.y*.5+.5)*host.clientHeight}px`;
+ const point=new T.Vector3(.53,.57,.8).project(camera),px=(point.x*.5+.5)*host.clientWidth,py=(-point.y*.5+.5)*host.clientHeight;
+ const labelX=Math.min(host.clientWidth-anchor.offsetWidth-12,px+38),labelY=Math.max(12,py-118);
+ anchor.style.left=`${labelX}px`;anchor.style.top=`${labelY}px`;
+ leader.querySelector('path').setAttribute('d',`M ${px} ${py} L ${px} ${py-18} L ${labelX+18} ${labelY+anchor.offsetHeight}`);
+ leader.querySelector('circle').setAttribute('cx',px);leader.querySelector('circle').setAttribute('cy',py);
  // Only a verified VOC scene may illustrate the light changing; particle-only scenes do not drive it.
  const response=detection.response;const tint=new T.Color('#91d980').lerp(new T.Color('#e6bd61'),response);diffuser.material.emissive.copy(tint);diffuser.material.color.copy(new T.Color('#f5f1df').lerp(tint,.55));
  renderer.render(scene,camera);host.dataset.detection=detection.phase;host.dataset.response=response.toFixed(3);host.dataset.chapter=chapter;host.dataset.ready='true';host.dataset.progress=progress.toFixed(3);host.parentElement.classList.add('room-ready');onReady?.(chapter,local,detection);

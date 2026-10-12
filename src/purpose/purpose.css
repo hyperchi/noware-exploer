@@ -12,3 +12,17 @@
 @media(max-width:700px){.room-playback{gap:10px}.room-sequence{max-width:185px;font-size:8px;line-height:1.6}.room-play{padding:0;font-size:10px}}
 
 .room-unavailable .room-playback,.room-unavailable .room-resume{display:none}
+
+/* The product portrait connects the room-scale object with the hardware hero. */
+.room-device-leader{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;color:#708969}
+.room-device-leader path{fill:none;stroke:currentColor;stroke-width:1.2}
+.room-device-leader circle{fill:none;stroke:currentColor;stroke-width:1.5}
+.room-device-label{transform:none;flex-direction:row;align-items:center;gap:8px;padding:8px 10px 8px 4px;width:200px;box-sizing:border-box;border:1px solid #e2e7df;background:#fffffff5;box-shadow:0 3px 15px #26262605}
+.room-device-label:before{display:none}
+.room-device-label>img{width:62px;height:62px;object-fit:contain;flex-shrink:0}
+.room-device-label>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.room-device-label span{font-family:inherit;font-size:12px;font-weight:600;color:#262626;letter-spacing:-.3px}
+.room-device-label strong{font-size:9px}.room-device-label small{font-size:8px}
+.room-unavailable .room-device-leader{display:none}
+.purpose-story[data-detection=signal] .room-device-leader{color:#b69251}
+@media(max-width:700px){.room-device-label{width:177px;padding:5px;gap:5px;transform:none}.room-device-label>img{width:48px;height:48px}.room-device-label span{font-size:11px}.room-device-label strong{font-size:8px}.room-device-label small{font-size:8px}}
