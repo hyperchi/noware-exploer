@@ -63,7 +63,7 @@ export async function createRoom(host,state,onReady){
  pillow.rotation.z=.18+(chapter===2?Math.sin(local*Math.PI*4)*.16*Math.sin(local*Math.PI):0);pillow.position.y=.59+(chapter===2?Math.sin(local*Math.PI*2)**2*.11:0);sash.rotation.y=chapter===3?-.48*activity:chapter>3?-.48:0;
  const detection=detectionPose(progress);
  for(let source=0;source<curves.length;source++){
-  const strength=flowActivity(progress,source),head=source===3?detection.arrival:1;
+  const strength=flowActivity(progress,source),head=smooth((progress-(.2+source*.2))/.04);
   trails[source].material.opacity=strength*(source===3?.4:.18);trails[source].geometry.setDrawRange(0,Math.max(0,Math.floor(head*80)));
   for(let j=0;j<40;j++){
    const i=source*40+j,life=(j/40+(state.reduced?0:time*.13))%1;
@@ -80,7 +80,7 @@ export async function createRoom(host,state,onReady){
  anchor.style.left=`${labelX}px`;anchor.style.top=`${labelY}px`;
  leader.querySelector('path').setAttribute('d',`M ${px} ${py} L ${px} ${py-18} L ${labelX+18} ${labelY+anchor.offsetHeight}`);
  leader.querySelector('circle').setAttribute('cx',px);leader.querySelector('circle').setAttribute('cy',py);
- // Only a verified VOC scene may illustrate the light changing; particle-only scenes do not drive it.
+ // Owner-confirmed particle revision; illustrative response, not measured data.
  const response=detection.response;const tint=new T.Color('#91d980').lerp(new T.Color('#e6bd61'),response);diffuser.material.emissive.copy(tint);diffuser.material.color.copy(new T.Color('#f5f1df').lerp(tint,.55));
  renderer.render(scene,camera);host.dataset.detection=detection.phase;host.dataset.response=response.toFixed(3);host.dataset.chapter=chapter;host.dataset.ready='true';host.dataset.progress=progress.toFixed(3);host.parentElement.classList.add('room-ready');onReady?.(chapter,local,detection);
  if((!state.reduced&&state.mode!=='paused')||Math.abs(progress-state.progress)>.001)raf=requestAnimationFrame(render);
