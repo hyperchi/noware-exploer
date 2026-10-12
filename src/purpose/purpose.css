@@ -26,3 +26,7 @@
 .room-unavailable .room-device-leader{display:none}
 .purpose-story[data-detection=signal] .room-device-leader{color:#b69251}
 @media(max-width:700px){.room-device-label{width:177px;padding:5px;gap:5px;transform:none}.room-device-label>img{width:48px;height:48px}.room-device-label span{font-size:11px}.room-device-label strong{font-size:8px}.room-device-label small{font-size:8px}}
+
+/* Never show an unpositioned callout over the loading poster. */
+.room-stage:not(.room-ready) .room-device-label,
+.room-stage:not(.room-ready) .room-device-leader{visibility:hidden}

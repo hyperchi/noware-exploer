@@ -30,3 +30,6 @@ The owner subsequently clarified that PM2.5 sensing is still being developed, wi
 Removed the room’s 250vh scroll track, sticky positioning, and Follow scroll mode. This section now occupies its natural content height. Playback and chapters remain independent of scrolling, with offscreen pause and reduced-motion support. Restored the fuller overlapping ambient trails from before the PM2.5 update. The existing hero choreography is unchanged.
 
 Customer-facing copy now uses design-intent language and a discreet Interactive demo label instead of development-status wording. Engineering status is unchanged: the owner’s particle sensor selection/specifications are not finalized. Do not introduce numerical accuracy, certification, or medical claims without evidence.
+
+### Loading and layout stability
+`node scripts/purpose/stability.mjs` delays GLB loading, verifies the callout stays hidden until its first correctly positioned frame, checks its stationary position during animation, and exercises mobile/desktop resizing. Frame deltas are clamped nonnegative to prevent early rAF timestamps from producing negative particle-path parameters. Canvas resize and redraw happen in the same frame, and room camera drift is removed.
