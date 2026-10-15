@@ -58,6 +58,9 @@
   --m-co2-rgb: 255, 148, 69;
   --m-lux: #ffd23f;
   --m-lux-rgb: 255, 210, 63;
+  --m-pm: #f472b6;
+  --m-pm25: var(--m-pm);
+  --m-pm-rgb: 244, 114, 182;
 
   --q-good: #3de0a0;
   --q-good-rgb: 61, 224, 160;
@@ -103,6 +106,9 @@
   --m-co2-rgb: 232, 116, 32;
   --m-lux: #d9a800;
   --m-lux-rgb: 217, 168, 0;
+  --m-pm: #db3f8d;
+  --m-pm25: var(--m-pm);
+  --m-pm-rgb: 219, 63, 141;
 
   --q-good: #11a874;
   --q-good-rgb: 17, 168, 116;
@@ -164,4 +170,8 @@
 .m-lux {
   --m: var(--m-lux);
   --m-rgb: var(--m-lux-rgb);
+}
+.m-pm {
+  --m: var(--m-pm);
+  --m-rgb: var(--m-pm-rgb);
 }

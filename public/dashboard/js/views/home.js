@@ -31,10 +31,17 @@ class DeviceCard {
 
     this.vocValue = h("div", { class: "value", text: "--" });
     this.co2Value = h("div", { class: "value", text: "--" });
+    this.co2Caption = h("div", { class: "caption", text: "CO2 ppm" });
     this.co2Box = h(
       "div",
       this.co2Value,
-      h("div", { class: "caption", text: "CO2 ppm" }),
+      this.co2Caption,
+    );
+    this.pm25Value = h("div", { class: "value", text: "--" });
+    this.pm25Box = h(
+      "div",
+      this.pm25Value,
+      h("div", { class: "caption", text: "SEN63C PM2.5 µg/m³" }),
     );
 
     this.spark = new Sparkline({ height: 48 });
@@ -81,6 +88,7 @@ class DeviceCard {
             "div.primary-metrics",
             h("div", this.vocValue, h("div", { class: "caption", text: "VOC ppb" })),
             this.co2Box,
+            this.pm25Box,
           ),
           h("div", this.spark.el, this.sparkCaption),
           h(
@@ -128,7 +136,9 @@ class DeviceCard {
 
     if (reading) {
       this.vocValue.textContent = String(reading.etvoc);
-      this.co2Value.textContent = device.isPro ? String(reading.co2) : "--";
+      this.co2Value.textContent = reading.hasTrueCo2 ? String(reading.co2) : "--";
+      this.co2Caption.textContent = reading.pmPresent ? "SEN63C CO2 ppm" : "CO2 ppm";
+      this.pm25Value.textContent = reading.pmValid ? reading.pm25.toFixed(1) : "--";
 
       const temp = useF ? cToF(reading.temperatureC) : reading.temperatureC;
       const cells = [
@@ -145,8 +155,9 @@ class DeviceCard {
       });
     }
 
-    this.co2Box.style.display = device.isPro ? "" : "none";
-    this.sparkCaption.textContent = `${device.isPro ? "CO2" : "VOC"} · last 2 hours`;
+    this.co2Box.style.display = reading?.hasTrueCo2 || reading?.pmPresent ? "" : "none";
+    this.pm25Box.style.display = reading?.pmPresent ? "" : "none";
+    this.sparkCaption.textContent = `${reading?.hasTrueCo2 ? "CO2" : "VOC"} · last 2 hours`;
     this.updated.textContent = device.isRemote
       ? `${device.isConnected ? updatedAgo(device.lastUpdated) : "Offline"} · shared by ${device.publisher || "a teammate"}`
       : device.isConnected
@@ -165,7 +176,7 @@ class DeviceCard {
   refreshSparkline() {
     const device = this.device;
     const slots = device.sparklineSlots(24);
-    if (device.isPro) {
+    if (device.lastReading?.hasTrueCo2) {
       this.spark.el.classList.remove("m-voc");
       this.spark.el.classList.add("m-co2");
       this.spark.el.style.color = "var(--m)";

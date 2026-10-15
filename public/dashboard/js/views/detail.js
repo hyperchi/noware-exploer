@@ -124,11 +124,19 @@ export class DetailView {
 
     // --- tiles ----------------------------------------------------------
     this.tiles = {
-      co2: new MetricTile("co2", "CO2", "m-co2"),
-      voc: new MetricTile("voc", "VOC", "m-voc"),
-      hum: new MetricTile("hum", "HUMIDITY", "m-hum"),
-      temp: new MetricTile("temp", "TEMPERATURE", "m-temp"),
+      co2: new MetricTile("co2", "SEN63C CO2", "m-co2"),
+      voc: new MetricTile("voc", "ENS16X VOC", "m-voc"),
+      pm1: new MetricTile("pm1", "SEN63C PM1.0", "m-pm"),
+      pm25: new MetricTile("pm25", "SEN63C PM2.5", "m-pm"),
+      pm4: new MetricTile("pm4", "SEN63C PM4.0", "m-pm"),
+      pm10: new MetricTile("pm10", "SEN63C PM10", "m-pm"),
+      hum: new MetricTile("hum", "SEN63C HUMIDITY", "m-hum"),
+      temp: new MetricTile("temp", "SEN63C TEMPERATURE", "m-temp"),
     };
+    this.tiles.pm1.el.style.display = "none";
+    this.tiles.pm25.el.style.display = "none";
+    this.tiles.pm4.el.style.display = "none";
+    this.tiles.pm10.el.style.display = "none";
 
     // --- brightness -----------------------------------------------------
     this.briValue = h("span.muted", { text: "--%" });
@@ -269,7 +277,7 @@ export class DetailView {
         h(
           "div.detail-rail",
           this.hero,
-          h("div.tiles", this.tiles.co2.el, this.tiles.voc.el, this.tiles.hum.el, this.tiles.temp.el),
+          h("div.tiles", ...Object.values(this.tiles).map((tile) => tile.el)),
           this.briCard,
           h("div.card", this.advBtn, advGrid),
         ),
@@ -401,6 +409,7 @@ export class DetailView {
       "voc_avg", "voc_min", "voc_max",
       "co2_avg", "co2_min", "co2_max",
       "etvoc_avg", "etvoc_min", "etvoc_max",
+      "pm25_avg", "pm25_min", "pm25_max",
     ];
     const rows = slots.map((s) =>
       [
@@ -411,7 +420,8 @@ export class DetailView {
         s.vocAvg, s.vocMin, s.vocMax,
         s.co2Avg, s.co2Min, s.co2Max,
         s.etvocAvg, s.etvocMin, s.etvocMax,
-      ].join(","),
+        s.pm25Avg, s.pm25Min, s.pm25Max,
+      ].map((value) => typeof value === "number" && !Number.isFinite(value) ? "" : value).join(","),
     );
     const safeName = device.name.replace(/[^\w.-]+/g, "-");
     downloadFile(`${safeName}-history.csv`, [header.join(","), ...rows].join("\n"));
@@ -473,12 +483,40 @@ export class DetailView {
     this.gauge.el.setAttribute("class", `gauge ${cls}`);
     this.gauge.setScore(airScore(reading), qualityShortLabel(quality));
 
-    // On Pro the CO2 tile shows the SCD41's true reading; on Base it falls
-    // back to the ENS16x estimate, exactly as the tray does.
-    const co2Value = device.isPro ? reading.co2 : reading.eco2;
-    this.tiles.co2.caption.textContent = device.isPro ? "CO2" : "eCO2";
-    this.tiles.co2.set(`${co2Value} ppm`, tileStatus("co2", co2Value));
+    // SEN63C Base units measure CO2 too; model alone cannot select the source.
+    const co2Value = reading.hasTrueCo2 ? reading.co2 : reading.eco2;
+    this.tiles.co2.caption.textContent = reading.pmPresent
+      ? "SEN63C CO2"
+      : reading.hasTrueCo2
+        ? "CO2"
+        : "ENS16X eCO2";
+    if (reading.pmPresent && !reading.hasTrueCo2) {
+      this.tiles.co2.set("--", { text: "Warming up", quality: null });
+    } else {
+      this.tiles.co2.set(`${co2Value} ppm`, tileStatus("co2", co2Value));
+    }
     this.tiles.voc.set(`${reading.etvoc} ppb`, tileStatus("voc", reading.etvoc));
+    for (const key of ["pm1", "pm25", "pm4", "pm10"]) {
+      this.tiles[key].el.style.display = reading.pmPresent ? "" : "none";
+    }
+    if (reading.pmPresent) {
+      const liveStatus = { text: reading.pmValid ? "Live" : "Waiting", quality: null };
+      this.tiles.pm1.set(reading.pmValid ? `${reading.pm1.toFixed(1)} µg/m³` : "--", liveStatus);
+      this.tiles.pm4.set(reading.pmValid ? `${reading.pm4.toFixed(1)} µg/m³` : "--", liveStatus);
+      this.tiles.pm10.set(reading.pmValid ? `${reading.pm10.toFixed(1)} µg/m³` : "--", liveStatus);
+      this.tiles.pm1.spark.setData(device.liveReadings.filter((r) => r.pmValid).map((r) => r.pm1));
+      this.tiles.pm4.spark.setData(device.liveReadings.filter((r) => r.pmValid).map((r) => r.pm4));
+      this.tiles.pm10.spark.setData(device.liveReadings.filter((r) => r.pmValid).map((r) => r.pm10));
+      this.tiles.pm25.set(
+        reading.pmValid ? `${reading.pm25.toFixed(1)} µg/m³` : "--",
+        reading.pmValid ? tileStatus("pm25", reading.pm25) : { text: "Waiting", quality: null },
+      );
+      this.tiles.pm25.spark.setData(
+        device.liveReadings.filter((r) => r.pmValid).map((r) => r.pm25),
+      );
+    }
+    this.tiles.hum.caption.textContent = reading.pmPresent ? "SEN63C HUMIDITY" : "HUMIDITY";
+    this.tiles.temp.caption.textContent = reading.pmPresent ? "SEN63C TEMPERATURE" : "TEMPERATURE";
     this.tiles.hum.set(`${reading.humidity.toFixed(0)}%`, tileStatus("hum", reading.humidity));
     this.tiles.temp.set(
       useF
@@ -571,6 +609,7 @@ export class DetailView {
         .filter((v) => v > CO2_VALID_FLOOR),
     );
     this.tiles.voc.spark.setData(spark.map((s) => s.etvocAvg).filter((v) => v > 0));
+    this.tiles.pm25.spark.setData(spark.map((s) => s.pm25Avg).filter(Number.isFinite));
     this.tiles.hum.spark.setData(spark.map((s) => s.humAvg).filter((v) => v > 0));
     this.tiles.temp.spark.setData(
       spark.map((s) => s.tempAvg).filter((v) => v !== 0).map(convertTemp(useF)),

@@ -13,8 +13,8 @@ const ONLINE_WINDOW_S = 20;
 const PUBLISHER_TIMEOUT_S = 30;
 const MAX_BATCH = 300;
 const MAX_SLOTS = 4032;
-const READING_NUMBERS = ['temperatureC', 'humidity', 'vocLevel', 'eco2', 'etvoc', 'co2', 'lux', 'aqiUba'];
-const SLOT_FIELD = /^(temp|hum|voc|co2|etvoc)(Avg|Min|Max)$/;
+const READING_NUMBERS = ['temperatureC', 'humidity', 'vocLevel', 'eco2', 'etvoc', 'co2', 'lux', 'aqiUba', 'pm1', 'pm25', 'pm4', 'pm10'];
+const SLOT_FIELD = /^(temp|hum|voc|co2|etvoc|pm25)(Avg|Min|Max)$/;
 
 const now = () => Date.now() / 1000;
 const finite = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -35,6 +35,11 @@ function cleanReading(r, offset) {
   if (!r || typeof r !== 'object' || !finite(r.timestamp)) return null;
   const out = {timestamp: r.timestamp + offset, isPro: r.isPro === true, frcNeeded: false};
   for (const key of READING_NUMBERS) out[key] = finite(r[key]) ? r[key] : 0;
+  out.pmPresent = r.pmPresent === true;
+  out.pmValid = out.pmPresent && r.pmValid === true &&
+    ['pm1', 'pm25', 'pm4', 'pm10'].every(key => finite(r[key]) && r[key] >= 0);
+  // Older publisher tabs only send isPro; explicit new validity takes precedence.
+  out.hasTrueCo2 = typeof r.hasTrueCo2 === 'boolean' ? r.hasTrueCo2 : r.isPro === true;
   out.fwVersion = typeof r.fwVersion === 'string' ? r.fwVersion.slice(0, 20) : '';
   return out;
 }
