@@ -46,7 +46,10 @@ export function parseLive(data) {
   const ens16x = data.ens16x || {};
   const scd41 = data.scd41 || {};
   const vcnl = data.vcnl4040 || {};
-  const co2 = Math.round(num(scd41.co2));
+  const sen63c = data.sen63c || {};
+  const senCo2Valid = sen63c.present === true && sen63c.co2_valid === true &&
+    typeof sen63c.co2 === "number" && Number.isFinite(sen63c.co2) && sen63c.co2 > 0;
+  const co2 = Math.round(num(senCo2Valid ? sen63c.co2 : scd41.co2));
   const model = data.model;
   return {
     temperatureC: num(ens210.temperature_c),
@@ -56,6 +59,16 @@ export function parseLive(data) {
     etvoc: Math.round(num(ens16x.etvoc)),
     co2,
     lux: num(vcnl.lux),
+    pmPresent: sen63c.present === true,
+    pmValid: sen63c.present === true && sen63c.valid === true &&
+      [sen63c.pm1_0, sen63c.pm2_5, sen63c.pm4_0, sen63c.pm10_0].every(
+        (value) => typeof value === "number" && Number.isFinite(value) && value >= 0,
+      ),
+    pm1: num(sen63c.pm1_0),
+    pm25: num(sen63c.pm2_5),
+    pm4: num(sen63c.pm4_0),
+    pm10: num(sen63c.pm10_0),
+    hasTrueCo2: senCo2Valid || model === "pro" || (model === undefined && co2 > 0),
     aqiUba: Math.round(num(ens16x.aqi_uba)),
     isPro: model !== undefined ? model === "pro" : co2 > 0,
     fwVersion: typeof data.fw === "string" ? data.fw : "",
@@ -88,29 +101,40 @@ export function fwLte(version, ceiling) {
  * Parse one slot of a get_history page.
  *
  * Serial keys: t_*=temp x100, h_*=humidity x100, q_*=VOC level, c_*=CO2 (true
- * CO2 on Pro, eCO2 on Base), v_*=eTVOC.
+ * CO2 when available, otherwise eCO2), v_*=eTVOC, p_*=PM2.5 x10.
  */
 export function parseHistorySlot(s) {
   const seq = Math.round(num(s.seq));
   if (!Number.isFinite(seq) || seq === SEQ_NONE) return null;
+  const s16x100 = (value) => {
+    const raw = Number(value);
+    return Number.isFinite(raw) && raw !== -32768 ? raw / 100 : NaN;
+  };
+  const u16 = (value, scale = 1) => {
+    const raw = Number(value);
+    return Number.isFinite(raw) && raw !== 0xffff ? raw / scale : NaN;
+  };
   return {
     sequence: seq,
     timestamp: 0, // anchored by the caller; the device has no RTC
-    tempAvg: num(s.t_a) / 100,
-    tempMin: num(s.t_n) / 100,
-    tempMax: num(s.t_x) / 100,
-    humAvg: num(s.h_a) / 100,
-    humMin: num(s.h_n) / 100,
-    humMax: num(s.h_x) / 100,
-    vocAvg: Math.round(num(s.q_a)),
-    vocMin: Math.round(num(s.q_n)),
-    vocMax: Math.round(num(s.q_x)),
-    co2Avg: Math.round(num(s.c_a)),
-    co2Min: Math.round(num(s.c_n)),
-    co2Max: Math.round(num(s.c_x)),
-    etvocAvg: Math.round(num(s.v_a)),
-    etvocMin: Math.round(num(s.v_n)),
-    etvocMax: Math.round(num(s.v_x)),
+    tempAvg: s16x100(s.t_a),
+    tempMin: s16x100(s.t_n),
+    tempMax: s16x100(s.t_x),
+    humAvg: s16x100(s.h_a),
+    humMin: s16x100(s.h_n),
+    humMax: s16x100(s.h_x),
+    vocAvg: u16(s.q_a),
+    vocMin: u16(s.q_n),
+    vocMax: u16(s.q_x),
+    co2Avg: u16(s.c_a),
+    co2Min: u16(s.c_n),
+    co2Max: u16(s.c_x),
+    etvocAvg: u16(s.v_a),
+    etvocMin: u16(s.v_n),
+    etvocMax: u16(s.v_x),
+    pm25Avg: u16(s.p_a, 10),
+    pm25Min: u16(s.p_n, 10),
+    pm25Max: u16(s.p_x, 10),
   };
 }
 

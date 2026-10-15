@@ -420,6 +420,7 @@ button:focus-visible {
 
 .primary-metrics {
   display: flex;
+  flex-wrap: wrap;
   gap: 28px;
 }
 .primary-metrics .value {

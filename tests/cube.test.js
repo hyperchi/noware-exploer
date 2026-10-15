@@ -15,15 +15,19 @@ test('shared cube relay: publish, read back, one publisher at a time, login requ
   const now=Date.now()/1000;
   // Publisher clock runs 100 s behind; the server shifts its timestamps.
   const sentAt=now-100;
-  const reading={timestamp:sentAt-1,temperatureC:22.5,humidity:54,etvoc:205,co2:640,isPro:true,fwVersion:'2.0.6',evil:'<script>'};
+  const reading={timestamp:sentAt-1,temperatureC:22.5,humidity:54,etvoc:205,co2:640,isPro:false,hasTrueCo2:true,pmPresent:true,pmValid:true,pm1:1.2,pm25:2.3,pm4:3.4,pm10:4.5,fwVersion:'2.1.0',evil:'<script>'};
   let r=await post('/live',{publisher:'laptop-aaaa',sentAt,readings:[reading],meta:{name:'Office',isPro:true,fwVersion:'2.0.6',ledPercent:100}});
   assert.equal(r.status,200);assert.equal((await r.json()).needHistory,true);
-  r=await post('/history',{publisher:'laptop-aaaa',sentAt,windowS:300,slots:[{sequence:1,timestamp:sentAt-600,co2Avg:500,junk:1},{sequence:2,timestamp:sentAt-300,co2Avg:510}]});
+  r=await post('/history',{publisher:'laptop-aaaa',sentAt,windowS:300,slots:[{sequence:1,timestamp:sentAt-600,co2Avg:500,pm25Avg:2.3,pm25Min:0,pm25Max:4.5,junk:1},{sequence:2,timestamp:sentAt-300,co2Avg:510}]});
   assert.equal(r.status,200);
   const view=await get('?me=viewer-bbbb');
   assert.equal(view.active,true);assert.equal(view.yours,false);assert.equal(view.online,true);assert.equal(view.publisher,'person@noso.so');
   assert.equal(view.meta.name,'Office');assert.equal(view.live.length,1);assert.equal(view.live[0].evil,undefined);
   assert.ok(Math.abs(view.live[0].timestamp-(now-1))<5);
+  assert.equal(view.live[0].hasTrueCo2,true);assert.equal(view.live[0].isPro,false);
+  assert.equal(view.live[0].pmPresent,true);assert.equal(view.live[0].pmValid,true);
+  assert.deepEqual(['pm1','pm25','pm4','pm10'].map(key=>view.live[0][key]),[1.2,2.3,3.4,4.5]);
+  assert.deepEqual(['pm25Avg','pm25Min','pm25Max'].map(key=>view.slots[0][key]),[2.3,0,4.5]);
   assert.equal(view.slots.length,2);assert.equal(view.slots[0].junk,undefined);
   const again=await get(`?me=viewer-bbbb&history_version=${view.historyVersion}&live_since=${view.live[0].timestamp}`);
   assert.equal(again.slots,undefined);assert.equal(again.live.length,0);
@@ -31,5 +35,16 @@ test('shared cube relay: publish, read back, one publisher at a time, login requ
   r=await post('/live',{publisher:'laptop-cccc',sentAt:now,readings:[reading]});
   assert.equal(r.status,409);assert.equal((await r.json()).publisher,'person@noso.so');
   assert.equal((await post('/live',{publisher:'x',sentAt:now})).status,400);
+  r=await post('/live',{publisher:'laptop-aaaa',sentAt:now,readings:[
+   {...reading,timestamp:now,pm25:null},
+   {timestamp:now+1,isPro:true,co2:800},
+  ]});
+  assert.equal(r.status,200);
+  const updated=await get();
+  assert.equal(updated.live.at(-2).pmValid,false);
+  assert.equal(updated.live.at(-1).hasTrueCo2,true);
+  assert.equal(updated.live.at(-1).pmPresent,false);
+  assert.equal(updated.live.at(-1).pmValid,false);
+
  }finally{await new Promise(r=>server.close(r));delete process.env.SESSION_SECRET;}
 });
