@@ -36,7 +36,7 @@ const expectText = async (text, where) => {
 
 async function main() {
 // Home
-await page.goto(`${base}/dashboard/`);
+await page.goto(`${base}/dashboard/#/intelligence`);
 await expectText('Rooms', 'home');
 await expectText('Kitchen', 'home');
 await expectText('Simulated', 'home');
@@ -108,7 +108,7 @@ await expectText('Your air right now', 'mobile room');
 await page.waitForTimeout(1500);
 if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Mobile overflow on room page');
 await page.screenshot({ path: `${shots}/air-room-mobile.png`, fullPage: true });
-await page.goto(`${base}/dashboard/#/`);
+await page.goto(`${base}/dashboard/#/intelligence`);
 await expectText('Rooms', 'mobile home');
 if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Mobile overflow on home');
 await page.screenshot({ path: `${shots}/air-home-mobile.png`, fullPage: true });

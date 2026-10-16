@@ -100,7 +100,7 @@ The design simulator is now USB-C-only. Legacy battery settings are removed when
 
 ## Air intelligence (dashboard)
 
-`/dashboard/` is no longer a sensor console. It answers, for each room: what is in the air, whether that is normal for this home, what probably caused it, what to do, whether it worked, and whether to ask your contractor. The numbers stay visible under every conclusion. See [docs/AIR_INTELLIGENCE_ARCHITECTURE.md](docs/AIR_INTELLIGENCE_ARCHITECTURE.md) for the design and [docs/MAC_MINI_AIRCUBE_GATEWAY.md](docs/MAC_MINI_AIRCUBE_GATEWAY.md) for running the headless collector on the office Mac mini.
+`/dashboard/` retains the original device cards and sensor/chart console. The optional **Air insights** view (`#/intelligence`) answers, for each room: what is in the air, whether that is normal for this home, what probably caused it, what to do, whether it worked, and whether to ask your contractor. The numbers stay visible under every conclusion. See [docs/AIR_INTELLIGENCE_ARCHITECTURE.md](docs/AIR_INTELLIGENCE_ARCHITECTURE.md) for the design and [docs/MAC_MINI_AIRCUBE_GATEWAY.md](docs/MAC_MINI_AIRCUBE_GATEWAY.md) for running the headless collector on the office Mac mini.
 
 - Engine: `lib/air-intelligence/` (pure ES modules, shared by server, browser and tests). Capabilities come from the device's frames: the AirCube with the SEN63C reports PM1/PM2.5/PM4/PM10 and true CO2; a legacy Base has neither and is treated accordingly.
 - Server: `/api/home` (homeowner) and `/api/contractor` (contractor), authorization in `lib/authz.js`, store in `lib/home-store.js` (local JSON with `NOWARE_DATA_DIR`, or private GCS snapshots with `NOWARE_STORE_BUCKET`; otherwise ephemeral).

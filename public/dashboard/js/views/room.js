@@ -425,7 +425,7 @@ export class RoomView {
 
   _menu() {
     const items = [];
-    if (this.source.kind === "server" && this.source.isMember) {
+    if (this.source.kind === "server" && this.source.isMember && this.source.canSimulate) {
       items.push({ label: "Run a scenario in this room…", onSelect: () => this._pickScenario((key) => this.source.simulate({ scenario: key })) });
       if (this.source.simulation) {
         items.push({ label: "Jump ahead 15 minutes", onSelect: () => this.source.simulate({ advanceMinutes: 15 }).then(() => this.refresh()) });
@@ -468,6 +468,7 @@ export function makeServerSource(feed, householdId, roomId) {
     householdId,
     roomId,
     get isMember() { return Boolean(household()?.isMember); },
+    get canSimulate() { return Boolean(feed.me?.demo); },
     get simulation() { return household()?.household.rooms.find((r) => r.id === roomId)?.devices?.some((d) => d.simulation) || false; },
     contractor: () => household()?.contractor || null,
     summary: ({ debug, units }) => homeApi.roomSummary(householdId, roomId, { debug, units }),

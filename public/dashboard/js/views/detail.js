@@ -82,7 +82,7 @@ export class DetailView {
     this.onBack = onBack;
     this.onFlash = onFlash;
     this.device = null;
-    this.metric = HISTORY_METRICS.find((m) => !m.requires);
+    this.metric = HISTORY_METRICS[0];
     this.rangeSeconds = HISTORY_RANGES[0].seconds;
 
     this._build();
@@ -188,7 +188,7 @@ export class DetailView {
 
     // --- history --------------------------------------------------------
     this.metricPicker = pillPicker(
-      HISTORY_METRICS.filter((m) => !m.requires).map((m) => ({ value: m.key, label: m.label === "Temperature" ? "Temp" : m.label })),
+      HISTORY_METRICS.map((m) => ({ value: m.key, label: m.label === "Temperature" ? "Temp" : m.label })),
       this.metric.key,
       (key) => {
         this.metric = HISTORY_METRICS.find((m) => m.key === key);
@@ -269,6 +269,7 @@ export class DetailView {
         this.connDot,
         this.connLabel,
         h("div.spacer"),
+        h("a.btn", { href: "#/intelligence", text: "Air insights" }),
         this.menuBtn,
       ),
       this.syncBar,
@@ -288,7 +289,7 @@ export class DetailView {
 
   setDevice(device) {
     this.device = device;
-    this.metric = HISTORY_METRICS.find((m) => !m.requires);
+    this.metric = HISTORY_METRICS[0];
     this.metricPicker.select(this.metric.key);
     this._historyVersion = -1;
     this.refresh();

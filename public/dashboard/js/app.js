@@ -17,6 +17,7 @@ import { DeviceRegistry } from "./devices.js";
 import { ShareFeed } from "./share.js";
 import { HomeFeed } from "./home-api.js";
 import { HomeView } from "./views/home.js";
+import { HomeView as IntelligenceHomeView } from "./views/intelligence-home.js";
 import { RoomView, makeServerSource } from "./views/room.js";
 import { DetailView } from "./views/detail.js";
 import { SettingsView } from "./views/settings.js";
@@ -35,7 +36,13 @@ class App {
     this.localSources = new Map();
     this.scenario = null;
 
-    this.home = new HomeView({
+    this.suppressAutoRoute = false;
+    this.home = new HomeView(this.registry, {
+      onOpenDetail: id => this.navigate(`#/device/${id}`),
+      onOpenSettings: () => this.navigate('#/settings'),
+      onConnect: () => this.connect(),
+    });
+    this.intelligence = new IntelligenceHomeView({
       feed: this.feed,
       registry: this.registry,
       onOpenRoom: (householdId, roomId) => this.navigate(`#/room/${householdId}/${roomId}`),
@@ -45,13 +52,14 @@ class App {
       onConnect: () => this.connect(),
     });
     this.room = new RoomView({ onBack: () => this.navigate("#/"), onOpenDevice: (device) => this.navigate(`#/device/${device.id}`) });
-    this.detail = new DetailView(this.registry, { onBack: () => history.back(), onFlash: (device) => this.openFlash(device) });
+    this.detail = new DetailView(this.registry, { onBack: () => { this.suppressAutoRoute = true; this.navigate("#/"); }, onFlash: (device) => this.openFlash(device) });
     this.settings = new SettingsView(this.registry, { onBack: () => history.back(), onFlash: (device) => this.openFlash(device), feed: this.feed });
     this.contractorList = new ContractorListView({ onOpenCustomer: (id) => this.navigate(`#/contractor/${id}`) });
     this.contractorHome = new ContractorHomeView({ onBack: () => this.navigate("#/contractor") });
 
     this.routes = {
       home: h("div.route", this.home.el),
+      intelligence: h("div.route", this.intelligence.el),
       room: h("div.route", this.room.el),
       device: h("div.route", this.detail.el),
       settings: h("div.route", this.settings.el),
@@ -97,7 +105,7 @@ class App {
     }
     try {
       const device = await this.registry.requestPort();
-      if (device) this.navigate(`#/air/${device.id}`);
+      if (device) this.navigate(`#/device/${device.id}`);
     } catch (err) {
       if (err?.name !== "NotFoundError" && err?.name !== "AbortError") toast(err.message || String(err), "err");
     }
@@ -109,17 +117,18 @@ class App {
 
   onRegistryChange() {
     for (const device of this.registry.devices) maybeOfferUpgradeCalibration(device);
-    // A single freshly connected cube with no home goes straight to its air view.
-    if (this.registry.devices.length === 1 && !this.registry.devices[0].isRemote && this.feed.available === false && (location.hash === "" || location.hash === "#/" || location.hash === "#") && !this._autoRouted) {
-      this._autoRouted = true;
-      location.replace(`#/air/${this.registry.devices[0].id}`);
+    // Preserve the original dashboard: one physical cube opens its sensor/chart view.
+    if (!this.suppressAutoRoute && this.registry.devices.length === 1 &&
+        this.registry.devices[0].source !== 'simulated' &&
+        (!location.hash || location.hash === '#/' || location.hash === '#')) {
+      location.replace(`#/device/${this.registry.devices[0].id}`);
       return;
     }
     this.render();
   }
 
   onFeedChange() {
-    if (this.route.name === "home") this.home.refresh();
+    if (this.route.name === "intelligence") this.intelligence.refresh();
   }
 
   navigate(hash) {
@@ -129,6 +138,7 @@ class App {
 
   parseHash() {
     const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+    if (parts[0] === "intelligence") return { name: "intelligence" };
     if (parts[0] === "room" && parts.length >= 3) return { name: "room", householdId: parts[1], roomId: parts.slice(2).join("/") };
     if (parts[0] === "air" && parts[1]) return { name: "room", deviceId: parts[1] };
     if (parts[0] === "scenario" && parts[1]) return { name: "room", scenario: parts[1] };
@@ -222,6 +232,9 @@ class App {
 
   refreshActive() {
     switch (this.route.name) {
+      case "intelligence":
+        this.intelligence.refresh();
+        break;
       case "device":
         if (this.registry.byId(this.route.id)) this.detail.refresh();
         break;

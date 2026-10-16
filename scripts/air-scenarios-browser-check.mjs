@@ -19,7 +19,7 @@ try {
       await p.waitForFunction(() => document.body.innerText.includes('SIMULATED') || document.body.innerText.includes('Simulated'));
       if (key === 'sensor_offline') await p.getByText('Sensor offline', { exact: true }).first().waitFor();
       if (key === 'sensor_warming_up') await p.getByText('AirCube is warming up', { exact: true }).waitFor();
-      if (key === 'legacy_base') assert.equal(await p.getByText('PM2.5', { exact: true }).count(), 0);
+      if (key === 'legacy_base') assert.equal(await p.locator('.route.active').getByText('PM2.5', { exact: true }).count(), 0);
       assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${key} overflow at ${width}`);
       if (['healthy', 'persistent_particles', 'sensor_offline', 'sensor_warming_up'].includes(key)) await p.screenshot({ path: `/tmp/air-${key}-${width}.png`, fullPage: true });
     }

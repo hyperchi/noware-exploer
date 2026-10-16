@@ -78,7 +78,7 @@ One object feeds every surface: `currentStatus`, `primaryIssue` (headline, expla
 
 ## Dashboard
 
-- `#/` home: "Your home" status, one card per room (status word, headline, numbers), contractor card, devices on this computer, "Try a scenario".
+- `#/` retains the original device-card dashboard and automatically opens the sensor/chart detail when one cube is connected. `#/intelligence` holds the optional air-insights home: "Your home" status, one card per room (status word, headline, numbers), contractor card, devices on this computer, "Try a scenario".
 - `#/room/:home/:room`, `#/air/:device`, `#/scenario/:key`: the room page. Hero (status, likely cause, confidence, plain explanation, the number with its normal range, primary action, personal note), What should I do (levels), What's happening (what changed, source, evidence, feedback), Did it work, Today, Trends (one annotated chart, raw toggle), Sensor details (meaning → number → context tiles with tooltips), contractor card with contextual CTA, device status, developer view.
 - `#/contractor`, `#/contractor/:home`: prioritized customers and one home's evidence (current state, recurring issues table, observed issue vs possible solutions, before/after since service visits, equipment and service history, homeowner requests, per-room story).
 - `#/device/:id`, `#/settings`: the existing device page (brightness, history export, firmware) and settings, now with household context, rooms, equipment and the sharing toggle.
@@ -149,3 +149,10 @@ Use a private bucket in the existing dedicated `noware-hardware` project. Set `N
 The adapter uses [GCS object-generation preconditions](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert) and the runtime metadata identity; it needs no exported service-account key. Snapshot writes are intentionally a small pilot implementation with up to 30 seconds of crash-loss exposure. At larger scale, replace `HomeStore` with a transactional repository and preserve the shared domain API. Deployments still require test/build success and must be reviewed separately from this feature branch.
 
 To register a real contractor, configure `ADMIN_EMAILS` to the administrator's already-authorized Google email and, from that signed-in session, POST `/api/home/providers` with `{name, members: [staffEmail], contact: {phone, email, bookingUrl}}`. Staff must also satisfy the existing Google identity allowlist; this work preserves that policy. Homeowner Settings can then choose the registered provider and enable sharing. The full provider staff setup is an administrative API operation; a public self-registration/contractor marketplace is intentionally absent.
+
+
+## Preserve the existing dashboard (user preference)
+
+The original device-card and sensor/chart views are the default again. They retain PM size-channel tiles and actual device history; air intelligence is a secondary `#/intelligence` view linked as “Air insights.” Normal live accounts do not show scenario controls on that home. Local viewing uses `NOWARE_DEMO=0` and a separate physical-only data directory. The design reference is noso.so: light surfaces, Inter typography, fine borders and restrained blue accents, while preserving the established dashboard layout.
+
+`scripts/classic-air-browser-check.mjs` verifies the physical publisher, actual history, PM2.5 chart, original device cards/detail, absence of seeded demo homes, secondary insights navigation, and desktop/mobile layout. It requires an actual local physical publisher and the development login endpoint; it does not generate readings.
