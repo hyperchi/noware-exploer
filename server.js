@@ -56,6 +56,7 @@ export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={})
   next();
  });
  app.use('/api/cube',cubeRouter(cubeStore,{
+  canPublish:(meta,email)=>{const h=meta.deviceKey&&store.householdOfDevice(meta.deviceKey);return !h||h.members.includes((email||'').toLowerCase())},
   onLive:(readings,cube)=>{service.onLive(readings,cube);onLive?.(readings,cube)},
   onHistory:(slots,cube)=>{service.onHistory(slots,cube);onHistory?.(slots,cube)},
  }));
