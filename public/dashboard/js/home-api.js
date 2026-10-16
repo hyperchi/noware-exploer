@@ -35,6 +35,8 @@ export const homeApi = {
   series: (id, roomId, seconds) => call("GET", `${HOME}/households/${id}/rooms/${roomId}/series?seconds=${seconds}`),
   ack: (id, eventId, recommendationId) => call("POST", `${HOME}/households/${id}/events/${encodeURIComponent(eventId)}/ack`, { recommendationId }),
   feedback: (id, eventId, body) => call("POST", `${HOME}/households/${id}/events/${encodeURIComponent(eventId)}/feedback`, body),
+  observe: (id, body) => call("POST", `${HOME}/households/${id}/observations`, body),
+  removeObservation: (id, observationId) => call("DELETE", `${HOME}/households/${id}/observations/${encodeURIComponent(observationId)}`),
   contact: (id, body) => call("POST", `${HOME}/households/${id}/contact`, body),
   contactRequests: (id) => call("GET", `${HOME}/households/${id}/contact-requests`),
   report: (id) => call("GET", `${HOME}/households/${id}/report`),

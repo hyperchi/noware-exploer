@@ -31,6 +31,7 @@ export class HomeView {
         this.nav,
         h("div.spacer"),
         this.pickerHost,
+        h("a.btn", { href: "#/simple", text: "Simple view" }),
         h("button.toolbtn", { type: "button", title: "Settings", "aria-label": "Settings", text: "⚙", onclick: onOpenSettings }),
         h("button.toolbtn", { type: "button", title: "Connect a device", "aria-label": "Connect a device", text: "+", onclick: onConnect }),
       ),

@@ -16,6 +16,7 @@ import { applyAppearance } from "./prefs.js";
 import { DeviceRegistry } from "./devices.js";
 import { ShareFeed } from "./share.js";
 import { HomeFeed } from "./home-api.js";
+import { SimpleView } from "./views/simple.js";
 import { HomeView } from "./views/home.js";
 import { HomeView as IntelligenceHomeView } from "./views/intelligence-home.js";
 import { RoomView, makeServerSource } from "./views/room.js";
@@ -51,6 +52,7 @@ class App {
       onOpenSettings: () => this.navigate("#/settings"),
       onConnect: () => this.connect(),
     });
+    this.simple = new SimpleView({ feed: this.feed });
     this.room = new RoomView({ onBack: () => this.navigate("#/"), onOpenDevice: (device) => this.navigate(`#/device/${device.id}`) });
     this.detail = new DetailView(this.registry, { onBack: () => { this.suppressAutoRoute = true; this.navigate("#/"); }, onFlash: (device) => this.openFlash(device) });
     this.settings = new SettingsView(this.registry, { onBack: () => history.back(), onFlash: (device) => this.openFlash(device), feed: this.feed });
@@ -60,6 +62,7 @@ class App {
     this.routes = {
       home: h("div.route", this.home.el),
       intelligence: h("div.route", this.intelligence.el),
+      simple: h("div.route", this.simple.el),
       room: h("div.route", this.room.el),
       device: h("div.route", this.detail.el),
       settings: h("div.route", this.settings.el),
@@ -128,6 +131,7 @@ class App {
   }
 
   onFeedChange() {
+    if (this.route.name === "simple") this.simple.refresh();
     if (this.route.name === "intelligence") this.intelligence.refresh();
   }
 
@@ -138,6 +142,7 @@ class App {
 
   parseHash() {
     const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+    if (parts[0] === "simple") return { name: "simple" };
     if (parts[0] === "intelligence") return { name: "intelligence" };
     if (parts[0] === "room" && parts.length >= 3) return { name: "room", householdId: parts[1], roomId: parts.slice(2).join("/") };
     if (parts[0] === "air" && parts[1]) return { name: "room", deviceId: parts[1] };
@@ -179,7 +184,7 @@ class App {
 
     this.route = route;
     for (const [name, node] of Object.entries(this.routes)) node.classList.toggle("active", name === route.name);
-    window.scrollTo(0, 0);
+    if (JSON.stringify(previous) !== JSON.stringify(route)) window.scrollTo(0, 0);
     this.refreshActive();
   }
 
@@ -232,6 +237,9 @@ class App {
 
   refreshActive() {
     switch (this.route.name) {
+      case "simple":
+        this.simple.refresh();
+        break;
       case "intelligence":
         this.intelligence.refresh();
         break;

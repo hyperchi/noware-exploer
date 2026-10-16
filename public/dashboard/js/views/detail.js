@@ -269,6 +269,7 @@ export class DetailView {
         this.connDot,
         this.connLabel,
         h("div.spacer"),
+        h("a.btn", { href: "#/simple", text: "Simple view" }),
         h("a.btn", { href: "#/intelligence", text: "Air insights" }),
         this.menuBtn,
       ),

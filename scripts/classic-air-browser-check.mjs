@@ -34,6 +34,16 @@ try {
   await page.getByRole('link', { name: 'Air insights', exact: true }).click();
   await page.locator('.route.active').getByText('Rooms', { exact: true }).first().waitFor();
   assert.equal(await page.getByText('Try a scenario', { exact: true }).count(), 0);
+  await page.locator('.route.active').getByRole('link', { name: 'Simple view', exact: true }).click();
+  await page.getByText('The numbers, made simple', { exact: true }).waitFor();
+  await page.getByText('Outdoor conditions unknown', { exact: true }).waitFor();
+  assert.equal(await page.locator('.simple-air').getByText('Simulated', { exact: true }).count(), 0);
+  await page.evaluate(() => window.scrollTo(0, 900));
+  await page.waitForTimeout(4500);
+  assert.ok(await page.evaluate(() => scrollY >= 850), 'live sensor updates must preserve reading position');
+  await page.screenshot({ path: '/tmp/noware-simple-live-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  await page.screenshot({ path: '/tmp/noware-simple-live-desktop.png', fullPage: true });
   assert.deepEqual(errors, []);
-  console.log('Classic dashboard passed: physical readings/history, PM2.5 chart, original device cards/detail, secondary insights, no demo home or scenario controls, desktop/mobile.');
+  console.log('Classic dashboard passed: physical readings/history, PM2.5 chart, original device cards/detail, secondary insights/simple view, stable scroll during live updates, no demo home or scenario controls, desktop/mobile.');
 } finally { await browser.close(); }
