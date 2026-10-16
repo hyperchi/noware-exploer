@@ -6,6 +6,7 @@ import { homeApi } from '../home-api.js';
 import { agoText, clockText, recommendationCard, contractorCard, timelineList, evidenceList, openContactModal } from '../air-ui.js';
 import { OBSERVATION_TYPES } from '../intelligence/source-patterns.js';
 import { measurementIsLive } from '../intelligence/live-measurements.js';
+import { simpleIcon, readingParts } from '../simple-icons.js';
 
 const NAMES = { pm25: 'Fine particles', co2: 'Fresh air', eco2: 'Fresh-air estimate', tvoc: 'Chemicals & odors', hum: 'Humidity', temp: 'Temperature' };
 const MEANINGS = { pm25: 'Tiny particles from things like cooking, dust or smoke.', co2: 'Carbon dioxide helps show when a room needs more fresh air.', eco2: 'An estimate from the gas sensor. It also reacts to odors.', tvoc: 'An estimate of gases from products, cooking and other sources.', hum: 'How much moisture is in the air.', temp: 'How warm or cool this room is.' };
@@ -23,7 +24,7 @@ export class SimpleView {
       h('header.simple-header', h('a.simple-brand', { href: '#/', text: 'Noware', 'aria-label': 'Noware original dashboard' }),
         h('span.simple-wordmark', { text: 'AIR, UNDERSTOOD.' }), h('div.spacer'),
         h('nav.simple-switch', { 'aria-label': 'Dashboard view' }, h('a.selected', { href: '#/simple', text: 'Simple view', 'aria-current': 'page' }), h('a', { href: '#/', text: 'Original view' })), h('a.simple-settings-link', { href: '#/settings', text: 'Settings', 'aria-label': 'Settings' })),
-      h('div.simple-topline', h('div', h('div.simple-kicker', { text: 'YOUR EVERYDAY AIR' }), h('p', { text: 'See what changed. Know what to do.' })), this.headerRooms),
+      h('div.simple-topline', h('div', h('div.simple-kicker', { text: 'YOUR EVERYDAY AIR' }), h('p.simple-page-title', { text: 'Your air, at a glance.' })), this.headerRooms),
       this.body,
       h('footer.simple-footer', h('span', { text: 'AirCube · Real readings. Thoughtful guidance.' }), h('a', { href: '#/intelligence', text: 'All rooms & air insights →' })),
     );
@@ -58,16 +59,15 @@ export class SimpleView {
     const current = issue ? room.measurements.find(m => m.channel === issue.channel) || issue.measurement : null;
     const hero = h(`section.simple-hero.${tone}`,
       h('div.simple-hero-main',
-        h('div.simple-kicker', h('span.simple-state-dot'), `${room.roomName} · ${warm ? 'WARMING UP' : online ? 'RIGHT NOW' : room.deviceHealth.state === 'online' ? 'NOT UPDATING' : room.deviceHealth.label.toUpperCase()}`,
-          room.deviceHealth.simulated ? h('span.badge.sim', { text: 'Simulated' }) : null),
+        h('div.simple-hero-heading', h('span.simple-room-label', { text: room.roomName }), h('span.simple-status-pill', h('span.simple-state-dot'), warm ? 'Warming up' : online ? 'Live' : room.deviceHealth.state === 'online' ? 'Not updating' : room.deviceHealth.label), room.deviceHealth.simulated ? h('span.badge.sim', { text: 'Simulated' }) : null),
         h('h1', { text: title }),
         h('p.simple-lead', { text: warm ? 'Your sensor is settling in. We’ll interpret the air once readings are ready.' : !online ? 'Your AirCube is not sending usable readings. We can’t tell how the air is right now.' : good && !issue ? 'Nothing in the measurements needs your attention right now.' : issue?.explanation || room.currentStatus.explanation }),
         current ? h('div.simple-primary-reading', h('strong', { text: current.text }), h('span', { text: current.technical }), h('span', { text: current.baseline?.text || current.baselineText || '' })) : null,
-        h('div.simple-health', { text: `${room.deviceName || 'AirCube'} · ${online ? 'Updated ' : 'Last reading '}${readingAge(age)}${room.deviceHealth.simulated ? ' · Simulated data' : ' · Physical sensor'}` }),
+        h('div.simple-health', simpleIcon('device'), h('span', { text: `${room.deviceName || 'AirCube'} · ${online ? 'Updated ' : 'Last reading '}${readingAge(age)}${room.deviceHealth.simulated ? ' · Simulated data' : ' · Physical sensor'}` })),
       ),
       h('aside.simple-next', h('div.simple-kicker', { text: 'WHAT TO DO' }),
         rec ? recommendationCard(rec, { onAck: async r => { try { await homeApi.ack(f.householdId, issue.eventId, r.id); await f.refresh(); toast('Saved. We’ll keep watching the air.'); } catch (e) { toast(e.message, 'err'); } }, onContact: () => this.contact(room), contractorName: f.household?.contractor?.name })
-          : h('div', h('div.simple-next-mark', { 'aria-hidden': 'true', text: good ? '✓' : '—' }), h('h2', { text: warm ? 'Give it a little time.' : !online ? 'Check your AirCube.' : good ? 'Carry on with your day.' : 'Keep an eye on the readings.' }), h('p', { text: warm ? 'Warm-up values will not be treated as an air problem.' : !online ? 'Check its power and the collector connection.' : good ? 'We’ll keep watching for changes.' : 'Open the room details for the measurements and guidance.' }), !online ? h('a.simple-link', { href: '#/', text: 'Open device dashboard →' }) : !good ? h('a.simple-link', { href: roomHref, text: 'See room details →' }) : null)),
+          : h('div', h('div.simple-next-mark', simpleIcon(good ? 'check' : 'device')), h('h2', { text: warm ? 'Give it a little time.' : !online ? 'Check your AirCube.' : good ? 'Carry on with your day.' : 'Keep an eye on the readings.' }), h('p', { text: warm ? 'Warm-up values will not be treated as an air problem.' : !online ? 'Check its power and USB connection. Your readings will return automatically.' : good ? 'We’ll keep watching for changes.' : 'Open the room details for the measurements and guidance.' }), !online ? h('a.simple-link', { href: '#/', text: 'Open device dashboard →' }) : !good ? h('a.simple-link', { href: roomHref, text: 'See room details →' }) : null)),
     );
     const recovery = room.recovery && online ? h('div.simple-recovery', h('span', { 'aria-hidden': 'true', text: room.recovery.state === 'improving' || room.recovery.state === 'resolved' ? '↘' : '↔' }), h('div', h('strong', { text: 'Is it getting better?' }), h('p', { text: room.recovery.text }))) : null;
     const mainChannels = ['pm25', room.capabilities.trueCo2 ? 'co2' : 'eco2', 'tvoc', 'hum'];
@@ -84,7 +84,7 @@ export class SimpleView {
       patterns?.associations.length ? h('div.simple-associations', ...patterns.associations.map(a => h('div', h('strong', { text: `${a.label} · ${a.recurring ? 'Repeated timing match' : 'Still learning'}` }), h('p', { text: a.text })))) : null,
       patterns?.recentObservations.length ? this.disclosure('notes', 'Your activity notes', h('ul.simple-notes', ...patterns.recentObservations.map(o => h('li', h('div', h('strong', { text: o.label }), h('span', { text: `You recorded · ${new Date(o.occurredAt * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${clockText(o.occurredAt)}` }), o.note ? h('p', { text: o.note }) : null), h('button.simple-link', { type: 'button', text: 'Remove', 'aria-label': `Remove ${o.label} note`, 'data-focus': `remove-${o.id}`, onclick: async () => { try { await homeApi.removeObservation(f.householdId, o.id); await f.refresh(); } catch (e) { toast(e.message, 'err'); } } }))))) : null,
     );
-    const story = h('section.simple-section.simple-events', this.sectionHead('Recent air events', 'Changes and actions from the last 24 hours.'), timelineList(room.timeline?.slice(-6), { empty: online ? 'No air events recorded in the last 24 hours.' : 'No recent air events recorded. Live readings are unavailable.' }));
+    const story = h('section.simple-section.simple-events', this.sectionHead('Recent air events', 'The changes that shaped your day.', h('a.simple-link', { href: roomHref, text: 'View room history →' })), h('div.simple-event-list', timelineList(room.timeline?.slice(-6), { empty: online ? 'No air events recorded in the last 24 hours.' : 'No recent air events recorded. Live readings are unavailable.' })));
     const provider = f.household?.contractor;
     const help = provider ? contractorCard(provider, { onContact: type => this.contact(room, type), onReport: () => this.contact(room, 'share_air_report') }) : h('section.simple-help', h('div', h('h2', { text: 'A little help, when you need it.' }), h('p', { text: 'Connect your home comfort provider to ask about recurring air problems.' })), h('a.simple-link', { href: '#/settings', text: 'Connect a provider →' }));
     fill(this.body, hero, story, recovery, aqiPanel(room, f, () => openLocationPicker(f)), metrics, cause, clues, help);
@@ -138,9 +138,12 @@ export class SimpleView {
     const average = live ? m.average5m : null;
     const age = m.measuredAt == null ? null : Math.max(0, now - m.measuredAt);
     const stamp = readingAge(age);
-    return h('article.simple-metric', h('div.simple-metric-heading', h('h3', { text: NAMES[m.channel] }), h('span', { text: !online ? warm ? 'Settling' : 'Last reading' : m.bandLabel })),
+    const value = readingParts(warm ? '—' : m.text);
+    return h('article.simple-metric', { 'data-status': live ? m.status : 'unknown' },
+      h('div.simple-metric-top', simpleIcon(({ pm25: 'particles', tvoc: 'chemicals', hum: 'humidity' })[m.channel] || 'air'), h('span.simple-metric-band', { text: !online ? warm ? 'Settling' : 'Last reading' : m.bandLabel })),
+      h('div.simple-metric-heading', h('h3', { text: NAMES[m.channel] })),
       h(`div.simple-live-stamp${live ? '.is-live' : ''}`, h(`span.simple-reading-dot${received ? '.just-received' : ''}`, { 'aria-hidden': 'true' }), h('span', { text: warm ? 'Warming up' : live ? `Live · ${stamp}` : m.value == null ? 'Waiting for a reading' : `Last · ${stamp}` })),
-      h('div.simple-metric-value', { text: warm ? '—' : m.text }), h('div.simple-technical', { text: `${m.technical}${m.kind === 'derived' ? ' · estimate' : ' · measured'}` }),
+      h('div.simple-metric-value', h('span', { text: value.number }), value.unit ? h('span.simple-value-unit', { text: ` ${value.unit}` }) : null), h('div.simple-technical', { text: `${m.technical}${m.kind === 'derived' ? ' · estimate' : ' · measured'}` }),
       h('div.simple-average', h('span', { text: '5-min avg' }), h('strong', { text: average?.value != null ? average.text : '—' })),
       average && !average.complete ? h('div.simple-average-note', { text: average.value == null ? 'Collecting readings…' : average.coverageSeconds < 60 ? 'Less than 1 min collected' : `${Math.floor(average.coverageSeconds / 60)} of 5 min collected`, title: 'Partial average. Missing, warming-up and invalid readings are excluded.' }) : null,
       h('p', { text: MEANINGS[m.channel] }),
