@@ -2,6 +2,8 @@
 // contractor contact and reports. Authorization is checked against the store
 // on every route (lib/authz.js); the UI never decides who sees what.
 import express from 'express';
+import { unavailableOutdoor } from '../lib/air-intelligence/outdoor.js';
+import { coarseLocation } from '../lib/outdoor-provider.js';
 import { OBSERVATION_TYPES } from '../lib/air-intelligence/source-patterns.js';
 import { principalFor, canViewHousehold, canEditHousehold, contractorViewOfHousehold } from '../lib/authz.js';
 import { SCENARIOS, mergeProfile, ROOM_TYPES, EQUIPMENT_TYPES, CONTACT_ACTIONS } from '../lib/air-intelligence/index.js';
@@ -51,6 +53,27 @@ export function homeRouter({ store, service, env = process.env }) {
   router.post('/households', (req, res) => {
     const household = store.upsertHousehold({ name: str(req.body?.name, 60) || 'My home', members: [req.principal.email], timeZone: 'UTC', rooms: [], equipment: [], profile: {} });
     res.status(201).json({ household });
+  });
+
+  router.get('/locations', async (req, res) => {
+    const query = str(req.query.name, 100);
+    if (query.length < 2) return res.status(400).json({ error: 'Enter a city or postal code.' });
+    if (!service.outdoorProvider.searchLocations) return res.status(503).json({ error: 'City search unavailable.' });
+    try { res.json({ locations: await service.outdoorProvider.searchLocations(query) }); }
+    catch { res.status(503).json({ error: 'City search is temporarily unavailable.' }); }
+  });
+
+  router.put('/households/:id/location', loadHousehold(true), (req, res) => {
+    if (req.body?.enabled === false) {
+      store.upsertHousehold({ ...req.household, location: null });
+      for (const engine of service.engines.values()) if (engine.householdId === req.household.id) engine.outdoor = unavailableOutdoor();
+      return res.json({ location: null });
+    }
+    const location = coarseLocation(req.body);
+    if (!location || req.body?.enabled !== true) return res.status(400).json({ error: 'A valid area and explicit enablement are required.' });
+    store.upsertHousehold({ ...req.household, location });
+    for (const engine of service.engines.values()) if (engine.householdId === req.household.id) engine.outdoor = unavailableOutdoor();
+    res.json({ location });
   });
 
   router.get('/providers', (req, res) => {

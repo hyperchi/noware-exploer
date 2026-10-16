@@ -221,3 +221,27 @@ test('activity observations persist with provenance and enforce room and househo
     assert.equal((await owner('DELETE', `${path}/${saved.json.observation.id}`)).status, 404);
   } finally { await close(); }
 });
+
+test('outdoor location is opt-in, coarse, household-scoped and removable', async () => {
+  const { store, cookieFor, api, close } = await boot();
+  try {
+    const home = store.upsertHousehold({ id: 'area-home', members: ['owner@noso.so'] });
+    store.upsertContractor({ id: 'area-tech', members: ['tech@noso.so'] });
+    store.assign({ householdId: home.id, contractorId: 'area-tech', shareInsights: true });
+    const owner = api(await cookieFor('owner@noso.so'));
+    const tech = api(await cookieFor('tech@noso.so'));
+    const stranger = api(await cookieFor('stranger@noso.so'));
+    const route = `/api/home/households/${home.id}/location`;
+    const location = { latitude: 40.7128, longitude: -74.006, label: 'Test area', enabled: true };
+    assert.equal((await stranger('PUT', route, location)).status, 403);
+    assert.equal((await tech('PUT', route, location)).status, 403);
+    assert.equal((await owner('PUT', route, { ...location, enabled: undefined })).status, 400);
+    assert.equal((await owner('PUT', route, { ...location, latitude: 999 })).status, 400);
+    const result = await owner('PUT', route, location);
+    assert.equal(result.status, 200); assert.equal(result.json.location.latitude, 40.7);
+    assert.equal(store.getHousehold(home.id).location.longitude, -74);
+    assert.equal((await tech('GET', `/api/home/households/${home.id}`)).json.household.location, undefined);
+    assert.equal((await owner('PUT', route, { enabled: false })).status, 200);
+    assert.equal(store.getHousehold(home.id).location, null);
+  } finally { await close(); }
+});

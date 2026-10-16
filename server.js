@@ -8,6 +8,7 @@ import {contractorRouter} from './api/contractor.js';
 import {RoomEngine} from './lib/air-intelligence/engine.js';
 import {CloudHomeStore} from './lib/cloud-home-store.js';
 import {createHomeStore} from './lib/home-store.js';
+import {OpenMeteoOutdoorProvider} from './lib/outdoor-provider.js';
 import {HomeService} from './lib/home-service.js';
 import {demoEnabled,seedDemo} from './lib/demo-seed.js';
 import {readSession,getCookie,SESSION_COOKIE,createSession,sessionCookie} from './lib/session.js';
@@ -16,7 +17,7 @@ import {ALLOWED_DOMAIN} from './lib/auth-policy.js';
 export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={}){
  const app=express();
  const store=homeStore||(process.env.NOWARE_STORE_BUCKET ? new CloudHomeStore({bucket:process.env.NOWARE_STORE_BUCKET}) : createHomeStore());
- const service=homeService||new HomeService({store});
+ const service=homeService||new HomeService({store,outdoorProvider:new OpenMeteoOutdoorProvider()});
  const ready=store.ready ? store.ready.then(()=>{if(!homeService)for(const key of store.engineKeys())service.engines.set(key,RoomEngine.fromJSON(store.loadEngine(key)))}) : Promise.resolve();
  app.locals.ready=ready;
  app.use((req,res,next)=>ready.then(()=>next(),()=>res.status(503).json({error:'Air data storage unavailable.'})));
