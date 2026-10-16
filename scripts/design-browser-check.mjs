@@ -25,7 +25,7 @@ try{
  const downloadPromise=page.waitForEvent('download');await page.locator('#export-design').click();const download=await downloadPromise;assert.equal(download.suggestedFilename(),'noware-design-study.json');
  await page.reload();assert.equal(await page.locator('#design-kind').inputValue(),'wifi');assert.equal(await page.locator('#design-variant').inputValue(),'pro');
  await page.screenshot({path:'/tmp/noware-design-desktop.png',fullPage:true});
- for(const width of [390,320]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Overflow at ${width}`);}
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth), `Overflow at ${width}: ${JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll("body *")].filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,8).map(e=>({id:e.id,cls:e.className,right:e.getBoundingClientRect().right}))))}`);}
  await page.screenshot({path:'/tmp/noware-design-mobile.png',fullPage:true});
  await page.getByRole('tab',{name:'Air & LEDs'}).click();assert.equal(await page.locator('[data-design-ref]').count(),0);await page.locator('#model').selectOption('pro');assert.ok(await page.locator('#co2').isEnabled());
  assert.deepEqual(errors,[]);console.log('Design lab: Pro selection, cellular power/SIM faults, successful sequence, baseline, export, persistence, board inspection, mobile and environment tab passed.');
