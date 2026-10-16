@@ -5,6 +5,8 @@ import auth from './api/auth.js';
 import {cubeRouter,gatewayPrincipal} from './api/cube.js';
 import {homeRouter} from './api/home.js';
 import {contractorRouter} from './api/contractor.js';
+import {RoomEngine} from './lib/air-intelligence/engine.js';
+import {CloudHomeStore} from './lib/cloud-home-store.js';
 import {createHomeStore} from './lib/home-store.js';
 import {HomeService} from './lib/home-service.js';
 import {demoEnabled,seedDemo} from './lib/demo-seed.js';
@@ -13,8 +15,11 @@ import {ALLOWED_DOMAIN} from './lib/auth-policy.js';
 
 export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={}){
  const app=express();
- const store=homeStore||createHomeStore();
+ const store=homeStore||(process.env.NOWARE_STORE_BUCKET ? new CloudHomeStore({bucket:process.env.NOWARE_STORE_BUCKET}) : createHomeStore());
  const service=homeService||new HomeService({store});
+ const ready=store.ready ? store.ready.then(()=>{if(!homeService)for(const key of store.engineKeys())service.engines.set(key,RoomEngine.fromJSON(store.loadEngine(key)))}) : Promise.resolve();
+ app.locals.ready=ready;
+ app.use((req,res,next)=>ready.then(()=>next(),()=>res.status(503).json({error:'Air data storage unavailable.'})));
  app.locals.homeStore=store;app.locals.homeService=service;
  // Outside production, a first-time publisher joins the seeded demo home instead of getting a bare one.
  if(!service.beforeCreateHousehold)service.beforeCreateHousehold=email=>{if(demoEnabled())seedDemo({store,service,userEmail:email,timeZone:process.env.NOWARE_TIMEZONE||'America/Los_Angeles'})};
@@ -70,6 +75,6 @@ export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={})
 if(process.argv[1]===fileURLToPath(import.meta.url)){
  const app=createApp();
  const server=app.listen(Number(process.env.PORT)||8080,'0.0.0.0',()=>console.log('noware server ready'));
- const shutdown=()=>{try{app.locals.homeService.stopAll();app.locals.homeStore.flush();}catch{}server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),2000).unref();};
+ const shutdown=async()=>{const timeout=setTimeout(()=>process.exit(1),8000);timeout.unref();server.close();try{app.locals.homeService.stopAll();await app.locals.homeStore.flush();process.exit(0)}catch(err){console.error('Shutdown persistence failed:',err.message);process.exit(1)}};
  process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown);
 }

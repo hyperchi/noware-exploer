@@ -89,3 +89,51 @@ test('relay isolates owners; device keys cannot steal a home; providers require 
     delete process.env.SESSION_SECRET; delete process.env.NOWARE_DEMO; delete process.env.ADMIN_EMAILS;
   }
 });
+
+test('cloud snapshots reload on restart and reject concurrent writers without overwriting', async () => {
+  const { CloudHomeStore } = await import('../lib/cloud-home-store.js');
+  let generation = 0, saved;
+  const fetchImpl = async (url, opts = {}) => {
+    if (opts.method === 'POST') {
+      if (Number(new URL(url).searchParams.get('ifGenerationMatch')) !== generation) return new Response('', { status: 412 });
+      saved = opts.body; generation++;
+      return Response.json({ generation: String(generation) });
+    }
+    if (!saved) return new Response('', { status: 404 });
+    return new URL(url).searchParams.has('alt') ? new Response(saved) : Response.json({ generation: String(generation) });
+  };
+  const args = { bucket: 'test-private', fetchImpl, tokenProvider: async () => 'test-token' };
+  const store = new CloudHomeStore(args); await store.ready;
+  store.upsertHousehold({ id: 'home', name: 'Persisted', members: ['owner@noso.so'] });
+  await store.flush();
+  const restored = new CloudHomeStore(args); await restored.ready;
+  assert.equal(restored.getHousehold('home').name, 'Persisted');
+  await store.flush();
+  await assert.rejects(restored.flush(), /Concurrent store writer/);
+  clearTimeout(store._timer); clearTimeout(restored._timer);
+});
+
+test('live numbers use the latest sample while inference smoothing uses recent live spacing', () => {
+  const e = new RoomEngine();
+  e.ingestSlots(Array.from({ length: 300 }, (_, i) => ({ timestamp: 100000 + i * 300, sequence: i, pm25Avg: 4 })), { trueCo2: true });
+  const start = 190000;
+  e.ingestReadings(Array.from({ length: 600 }, (_, i) => ({ ...reading(start + i), pm25: i < 500 ? 4 : 40, pm1: i < 500 ? 2 : 30 })));
+  const s = e.assess({ now: start + 599, debug: true });
+  assert.equal(s.debug.features.pm25.current, 40);
+  assert.equal(s.measurements.find(m => m.channel === 'pm25').value, 40);
+  assert.ok(s.debug.features.pm1.current <= s.debug.features.pm25.current);
+});
+
+test('offline scenarios do not retimestamp old samples as live; warm-up demo starts warming', () => {
+  let now = 200000;
+  const store = new HomeStore(), service = new HomeService({ store, clock: () => now });
+  const h = store.upsertHousehold({ id: 'test', members: [], rooms: [{ id: 'room', name: 'Room', deviceKeys: [] }], equipment: [] });
+  try {
+    service.startScenario(h, h.rooms[0], 'sensor_offline', { withHistory: false, offsetS: 900 });
+    const offline = service.engineFor('sim:test:room').assess({ now });
+    assert.equal(offline.deviceHealth.state, 'offline'); assert.equal(offline.primaryIssue, null);
+    service.startScenario(h, h.rooms[0], 'sensor_warming_up', { withHistory: false });
+    const warm = service.engineFor('sim:test:room').assess({ now });
+    assert.equal(warm.deviceHealth.state, 'warming_up'); assert.equal(warm.activeEvents.length, 0);
+  } finally { service.stopAll(); }
+});
