@@ -1,6 +1,6 @@
 # Moving the AirCube to the Mac mini gateway
 
-The AirCube is developed on a laptop today. When it moves to the office Mac
+The AirCube is attached to the development Mac today. When it moves to the office Mac
 mini, that machine becomes the always-on collector: `gateway/collector.js`
 reads the cube over USB and publishes to the noware relay, and every signed-in
 dashboard (laptop, phone, contractor view) reads from the relay. No browser tab
@@ -24,12 +24,14 @@ the migration is: same steps, different `NOWARE_API` and token.
 
 ```sh
 # first time
-git clone https://github.com/hyperchi/noware-exploer.git
+git clone --branch feature/air-intelligence https://github.com/hyperchi/noware-exploer.git
 cd noware-exploer
 
 # later updates
 cd noware-exploer
-git pull
+git fetch origin
+git switch feature/air-intelligence
+git pull --ff-only origin feature/air-intelligence
 ```
 
 Node 20 or newer is required (`node --version`). Install it with the official
@@ -40,7 +42,7 @@ Playwright or the explorer build; only the gateway's own dependencies.
 
 ```sh
 cd gateway
-npm install
+npm ci
 ```
 
 This installs `serialport` (with a prebuilt binary for Apple silicon and
@@ -156,10 +158,28 @@ collector at login, restarts it if it exits, and logs to `/tmp`. It reads
 `gateway/.env` itself, so the plist contains no secret.
 
 ```sh
-cd /path/to/noware-exploer          # the checkout from step 1
-sed -e "s|__NODE__|$(command -v node)|g" -e "s|__REPO__|$PWD|g" \
-    gateway/launchd/com.noware.aircube-gateway.plist \
-    > ~/Library/LaunchAgents/com.noware.aircube-gateway.plist
+# At the repository root; creates a plist with XML-safe absolute paths.
+python3 - <<'PYAGENT'
+from pathlib import Path
+import plistlib, shutil, datetime
+repo = Path.cwd()
+node = shutil.which('node')
+assert node and (repo / 'gateway/collector.js').exists()
+target = Path.home() / 'Library/LaunchAgents/com.noware.aircube-gateway.plist'
+target.parent.mkdir(parents=True, exist_ok=True)
+if target.exists():
+    backup = target.with_suffix('.plist.' + datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.backup')
+    shutil.copy2(target, backup)
+logs = Path.home() / 'Library/Logs/noware'
+logs.mkdir(parents=True, exist_ok=True)
+with target.open('wb') as f:
+    plistlib.dump({ 'Label': 'com.noware.aircube-gateway',
+        'ProgramArguments': [node, str(repo / 'gateway/collector.js')],
+        'WorkingDirectory': str(repo / 'gateway'), 'RunAtLoad': True,
+        'KeepAlive': True, 'ThrottleInterval': 10,
+        'StandardOutPath': str(logs / 'gateway.log'),
+        'StandardErrorPath': str(logs / 'gateway.err.log') }, f)
+PYAGENT
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.noware.aircube-gateway.plist
 launchctl print gui/$(id -u)/com.noware.aircube-gateway | head -20
 ```
@@ -169,7 +189,7 @@ Useful commands:
 ```sh
 launchctl kickstart -k gui/$(id -u)/com.noware.aircube-gateway   # restart (e.g. after git pull)
 launchctl bootout gui/$(id -u)/com.noware.aircube-gateway        # uninstall
-tail -f /tmp/noware-aircube-gateway.log
+tail -f ~/Library/Logs/noware/gateway.log
 ```
 
 Stop the terminal instance from step 5 before bootstrapping the agent: two
@@ -257,3 +277,37 @@ GATEWAY_TOKENS=<token>:winston@noso.so
 ```
 
 Several gateways use a comma-separated list. The room is the one named by `AIRCUBE_ROOM` (created if missing); the device key `AIRCUBE_DEVICE_KEY` keeps the same room across restarts. A token without an owner still publishes to the shared relay, but the air-intelligence home view cannot place the cube in a room.
+
+
+## Branch-specific migration checklist
+
+1. Stop the collector/browser on the development Mac before moving the cube. No firmware change is required. Do not open the same serial device from two processes.
+2. Fetch/check out `feature/air-intelligence` on the mini (or use merged main after a separate reviewed merge). Run `npm ci --prefix gateway` from the root.
+3. Copy `gateway/.env.example` to `gateway/.env`, set `NOWARE_API` to the backend running this feature, set `GATEWAY_TOKEN`, and set the same `AIRCUBE_DEVICE_KEY` used before migration. The backend token entry must be `<token>:<homeowner Google email>`. The bare token goes on the mini. Preserve the device key to preserve room history; serial path can change freely. With no configured key, USB serial identity is used automatically.
+4. Leave `AIRCUBE_PORT` unset to discover USB by vendor/product ID. macOS built-in USB/JTAG does not need BLE permission. BLE/Zigbee collector ingestion is not implemented, and no BLE pairing is needed for this USB flow.
+5. Start `node gateway/collector.js`; check `curl http://127.0.0.1:8787/health`. Confirm `connected`, a recent `lastReadingAt`, capabilities, ENS status and successful `publish`. Give sensors their actual firmware-indicated warm-up time.
+6. Sign in at the configured backend's `/dashboard/`; verify the Office room, physical badge, actual PM2.5/CO2 and recent timestamp. With `NODE_ENV=production`, no demo home is created. The Google email on the token must match the signed-in owner. The existing public production site does not acquire this feature until it is separately deployed.
+7. Unplug/replug once on the mini: expect stale/offline, then reconnect and possibly warm-up. Check that old values are labelled historical, no false incident appears, and ingestion resumes.
+8. Stop the terminal collector and install the LaunchAgent using the safe plist generator above. If an agent is already installed, `launchctl bootout` it before `bootstrap`; the generator preserves the old plist as a backup. Verify health after login/restart. No LaunchAgent was installed on this development Mac by the implementation.
+
+For a backend hosted on the mini, also install root dependencies and build the app. Set `NOWARE_DATA_DIR` to a private persistent directory so household relationships, actions, rollups and events survive restart. Keep this separate from gateway capture/state. A cloud backend instead uses `NOWARE_STORE_BUCKET` as described in the architecture document. The gateway's 4000-sample retry queue is in memory; daily capture files persist independently and are not automatically replayed after a process restart. Copy the gateway state/capture directory separately if those local captures are needed on the mini. It contains no server session secret.
+
+## Exact local development startup (isolated checkout)
+
+```sh
+cd /path/to/noware-air-intelligence
+npm ci
+npm ci --prefix gateway
+npm run build
+export SESSION_SECRET="$(openssl rand -base64 48)"
+export GATEWAY_TOKEN="$(openssl rand -hex 32)"
+export GATEWAY_TOKENS="$GATEWAY_TOKEN:you@noso.so"
+export NOWARE_DATA_DIR="$HOME/.noware-air-intelligence"
+export DEV_LOGIN_EMAIL=you@noso.so
+export NOWARE_DEMO=0
+PORT=8080 npm start
+```
+
+Open `http://localhost:8080/dev-login` for local development only. The development route does not exist when `NODE_ENV=production`. A fresh account can create its home in the dashboard; publishing an owned physical cube also provisions its home/room. To explore the full three-room homeowner/contractor demo, restart with `NOWARE_DEMO=1` using a separate data directory. Never set `DEV_LOGIN_EMAIL` on a public server.
+
+In another terminal, configure the gateway `.env` with `NOWARE_API=http://localhost:8080`, the same bare `GATEWAY_TOKEN`, a stable device key and room, then run `node gateway/collector.js`. Stop the old collector first. Keep tokens out of shell history by editing the gitignored file locally. The code never requires a fixed username, hostname, IP address or USB device path.
