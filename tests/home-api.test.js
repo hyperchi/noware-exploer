@@ -188,3 +188,36 @@ test('a physical cube published through the relay lands in the publisher\'s own 
     await close();
   }
 });
+
+test('activity observations persist with provenance and enforce room and household authorization', async () => {
+  const { store, cookieFor, api, close } = await boot();
+  try {
+    const home = store.upsertHousehold({ id: 'notes-home', members: ['owner@noso.so'], rooms: [{ id: 'office', name: 'Office', type: 'office', deviceKeys: [] }] });
+    store.upsertContractor({ id: 'notes-tech', members: ['tech@noso.so'] });
+    store.assign({ householdId: home.id, contractorId: 'notes-tech', shareInsights: true });
+    const owner = api(await cookieFor('owner@noso.so', 'Owner'));
+    const stranger = api(await cookieFor('stranger@noso.so', 'Stranger'));
+    const tech = api(await cookieFor('tech@noso.so', 'Tech'));
+    const path = `/api/home/households/${home.id}/observations`;
+    const body = { roomId: 'office', type: 'pet_activity', occurredAt: Date.now() / 1000, note: 'Cat running around', readingSource: 'simulated' };
+    assert.equal((await stranger('POST', path, body)).status, 403);
+    assert.equal((await tech('POST', path, body)).status, 403);
+    assert.equal((await owner('POST', path, { ...body, roomId: 'another-home-room' })).status, 404);
+    assert.equal((await owner('POST', path, { ...body, type: 'allergen_detected' })).status, 400);
+    assert.equal((await owner('POST', path, { ...body, occurredAt: Date.now() / 1000 + 3600 })).status, 400);
+    const saved = await owner('POST', path, body);
+    assert.equal(saved.status, 201);
+    assert.equal(saved.json.observation.kind, 'context');
+    assert.equal(saved.json.observation.readingSource, 'physical', 'source comes from the room, not client claims');
+    const summary = await owner('GET', `/api/home/households/${home.id}/summary`);
+    assert.equal(summary.json.rooms[0].sourcePatterns.recentObservations[0].note, body.note);
+    const report = await owner('GET', `/api/home/households/${home.id}/report`);
+    assert.equal(report.json.rooms[0].sourceClues.associations[0].observationCount, 1);
+    const shared = await tech('GET', `/api/home/households/${home.id}/summary`);
+    assert.equal(shared.json.rooms[0].sourcePatterns.recentObservations[0].kind, 'context');
+    assert.equal((await stranger('DELETE', `${path}/${saved.json.observation.id}`)).status, 403);
+    assert.equal((await owner('DELETE', `${path}/${saved.json.observation.id}`)).status, 200);
+    assert.equal(store.observationsFor(home.id).length, 0);
+    assert.equal((await owner('DELETE', `${path}/${saved.json.observation.id}`)).status, 404);
+  } finally { await close(); }
+});

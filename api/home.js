@@ -2,6 +2,7 @@
 // contractor contact and reports. Authorization is checked against the store
 // on every route (lib/authz.js); the UI never decides who sees what.
 import express from 'express';
+import { OBSERVATION_TYPES } from '../lib/air-intelligence/source-patterns.js';
 import { principalFor, canViewHousehold, canEditHousehold, contractorViewOfHousehold } from '../lib/authz.js';
 import { SCENARIOS, mergeProfile, ROOM_TYPES, EQUIPMENT_TYPES, CONTACT_ACTIONS } from '../lib/air-intelligence/index.js';
 import { demoEnabled, seedDemo, DEMO_HOUSEHOLD_ID } from '../lib/demo-seed.js';
@@ -136,6 +137,25 @@ export function homeRouter({ store, service, env = process.env }) {
     if (!room) return res.status(404).json({ error: 'Room not found.' });
     const seconds = Math.min(7 * 86400, Math.max(600, Number(req.query.seconds) || 3600));
     res.json(service.seriesForRoom(req.household, room, { seconds }));
+  });
+
+  router.post('/households/:id/observations', loadHousehold(true), (req, res) => {
+    const { roomId, type, occurredAt, note } = req.body || {};
+    const room = store.roomOf(req.household.id, roomId);
+    if (!room) return res.status(404).json({ error: 'Room not found.' });
+    if (!Object.hasOwn(OBSERVATION_TYPES, type || '')) return res.status(400).json({ error: 'Choose an activity.' });
+    const now = service.clock();
+    if (!Number.isFinite(occurredAt) || occurredAt > now + 30 || occurredAt < now - 86400) return res.status(400).json({ error: 'Choose a time within the last day.' });
+    if (store.observationsFor(req.household.id).filter(o => o.createdAt >= now - 86400).length >= 200) return res.status(429).json({ error: 'Daily activity note limit reached.' });
+    const deviceKey = service.deviceKeyForRoom(room);
+    const readingSource = service.engines.get(deviceKey)?.source || 'physical';
+    const observation = store.addObservation({ householdId: req.household.id, roomId, type, occurredAt, note: str(note, 300), readingSource });
+    res.status(201).json({ observation });
+  });
+
+  router.delete('/households/:id/observations/:observationId', loadHousehold(true), (req, res) => {
+    if (!store.removeObservation(req.household.id, req.params.observationId)) return res.status(404).json({ error: 'Activity note not found.' });
+    res.json({ ok: true });
   });
 
   router.post('/households/:id/events/:eventId/ack', loadHousehold(true), (req, res) => {
