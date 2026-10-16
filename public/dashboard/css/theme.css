@@ -1,48 +1,97 @@
-/* AirCube design tokens.
+/* noware design tokens.
  *
- * Verbatim port of the palette in AirCube_iOS/AirCube/Theme.swift, which the
- * desktop tray also ports in aircubeapp/theme.py. Colour is reserved for
- * communicating air quality; every other surface stays neutral.
+ * Follows the noware explorer and noso.so: Inter, white and neutral greys,
+ * hairline borders, square corners, a restrained blue accent. Colour is
+ * reserved for the state of the air; everything else stays quiet. A dark
+ * appearance remains available from Settings.
  *
  * Each colour is declared twice: as a hex value for direct use, and as a bare
- * "R, G, B" triplet so it can be used with an alpha channel without relying on
- * relative-colour syntax.
+ * "R, G, B" triplet so it can be used with an alpha channel.
  */
 
-:root {
-  --font: "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-  --font-mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap");
 
-  --card-radius: 24px;
+:root {
+  --font: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: "SF Mono", Menlo, Consolas, monospace;
+
+  --card-radius: 4px;
   --card-pad: 18px;
   --section-gap: 14px;
-  --tile-gap: 12px;
+  --tile-gap: 10px;
 
   /* fixed across both appearances */
-  --accent: #8b5cf6;
-  --accent-rgb: 139, 92, 246;
-  --accent-soft: #c084fc;
-  --accent-soft-rgb: 192, 132, 252;
+  --accent: #2563eb;
+  --accent-rgb: 37, 99, 235;
+  --accent-soft: #1d4ed8;
+  --accent-soft-rgb: 29, 78, 216;
 }
 
 :root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f5f5f5;
+  --card: #ffffff;
+  --card-top: #ffffff;
+  --card-bottom: #fcfcfc;
+  --card-bottom-rgb: 252, 252, 252;
+  --card-border: #e5e5e5;
+  --card-border-rgb: 229, 229, 229;
+  --text: #24302e;
+  --text-rgb: 36, 48, 46;
+  --muted: #6b6f6e;
+  --faint: #9a9a9a;
+
+  --pill-track: #efefef;
+  --pill-selected: #ffffff;
+
+  --m-temp: #c2567f;
+  --m-temp-rgb: 194, 86, 127;
+  --m-hum: #2a8fcf;
+  --m-hum-rgb: 42, 143, 207;
+  --m-voc: #15966a;
+  --m-voc-rgb: 21, 150, 106;
+  --m-eco2: #7a62d6;
+  --m-eco2-rgb: 122, 98, 214;
+  --m-etvoc: #0f9a86;
+  --m-etvoc-rgb: 15, 154, 134;
+  --m-co2: #d97a1e;
+  --m-co2-rgb: 217, 122, 30;
+  --m-lux: #c99a00;
+  --m-lux-rgb: 201, 154, 0;
+  --m-pm: #c9407f;
+  --m-pm-rgb: 201, 64, 127;
+
+  --q-good: #2e9e6a;
+  --q-good-rgb: 46, 158, 106;
+  --q-warn: #c9930f;
+  --q-warn-rgb: 201, 147, 15;
+  --q-bad: #e07a1f;
+  --q-bad-rgb: 224, 122, 31;
+  --q-crit: #d9463e;
+  --q-crit-rgb: 217, 70, 62;
+
+  --shadow: 0 8px 24px rgba(36, 48, 46, 0.08);
+}
+
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #09080d;
-  --card: #15121c;
-  --card-top: #181420;
-  --card-bottom: #120f19;
-  --card-bottom-rgb: 18, 15, 25;
-  --card-border: #24202d;
-  --card-border-rgb: 36, 32, 45;
-  --text: #f5f2fa;
-  --text-rgb: 245, 242, 250;
-  --muted: #9a93a8;
-  --faint: #746d82;
+  --bg: #0f1110;
+  --card: #171a19;
+  --card-top: #1a1d1c;
+  --card-bottom: #141716;
+  --card-bottom-rgb: 20, 23, 22;
+  --card-border: #272b2a;
+  --card-border-rgb: 39, 43, 42;
+  --text: #f1f3f2;
+  --text-rgb: 241, 243, 242;
+  --muted: #a4a8a7;
+  --faint: #767a79;
 
-  --pill-track: #0f0d15;
-  --pill-selected: #2b2635;
+  --pill-track: #121514;
+  --pill-selected: #2a2e2d;
 
   --m-temp: #e887b8;
   --m-temp-rgb: 232, 135, 184;
@@ -59,7 +108,6 @@
   --m-lux: #ffd23f;
   --m-lux-rgb: 255, 210, 63;
   --m-pm: #f472b6;
-  --m-pm25: var(--m-pm);
   --m-pm-rgb: 244, 114, 182;
 
   --q-good: #3de0a0;
@@ -74,57 +122,10 @@
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
-[data-theme="light"] {
-  color-scheme: light;
-
-  --bg: #f4f2f8;
-  --card: #ffffff;
-  --card-top: #ffffff;
-  --card-bottom: #faf8fd;
-  --card-bottom-rgb: 250, 248, 253;
-  --card-border: #e4e0ec;
-  --card-border-rgb: 228, 224, 236;
-  --text: #1b1626;
-  --text-rgb: 27, 22, 38;
-  --muted: #6e6680;
-  --faint: #9a93a8;
-
-  --pill-track: #e9e5f1;
-  --pill-selected: #ffffff;
-
-  --m-temp: #d1568f;
-  --m-temp-rgb: 209, 86, 143;
-  --m-hum: #2493d6;
-  --m-hum-rgb: 36, 147, 214;
-  --m-voc: #11a874;
-  --m-voc-rgb: 17, 168, 116;
-  --m-eco2: #8163e8;
-  --m-eco2-rgb: 129, 99, 232;
-  --m-etvoc: #0fa08b;
-  --m-etvoc-rgb: 15, 160, 139;
-  --m-co2: #e87420;
-  --m-co2-rgb: 232, 116, 32;
-  --m-lux: #d9a800;
-  --m-lux-rgb: 217, 168, 0;
-  --m-pm: #db3f8d;
-  --m-pm25: var(--m-pm);
-  --m-pm-rgb: 219, 63, 141;
-
-  --q-good: #11a874;
-  --q-good-rgb: 17, 168, 116;
-  --q-warn: #d79a17;
-  --q-warn-rgb: 215, 154, 23;
-  --q-bad: #e87420;
-  --q-bad-rgb: 232, 116, 32;
-  --q-crit: #e04f4f;
-  --q-crit-rgb: 224, 79, 79;
-
-  --shadow: 0 10px 30px rgba(27, 22, 38, 0.08);
-}
-
 /* Quality classes set --q / --q-rgb so pills, dots, gauges and hero gradients
- * can all tint themselves from one source. AirQuality.GOOD/FAIR/POOR/BAD map
- * onto good/warn/bad/crit exactly as theme.py's _QUALITY_KEY does. */
+ * can all tint themselves from one source. The air-intelligence statuses map
+ * onto them: excellent/good -> good, needs_attention -> fair, poor -> poor,
+ * unhealthy -> bad. */
 .q-good {
   --q: var(--q-good);
   --q-rgb: var(--q-good-rgb);

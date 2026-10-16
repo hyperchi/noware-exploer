@@ -11,7 +11,7 @@ test('Cloud Run server protects assets and exposes only login and health',async(
  try{
   const home=await fetch(base+'/');assert.equal(home.status,200);assert.match(await home.text(),/home-|Sign in/);
   assert.equal((await fetch(base+'/showcase/aircube-base.glb',{method:'HEAD'})).status,200);
-  for(const url of ['/board.json','/source/AirCube.kicad_pcb','/source/AirCube.kicad_sch','/models/esp32-h2-mini-1.json','/dashboard/','/dashboard/js/app.js','/dashboard/firmware/manifest.json']){
+  for(const url of ['/board.json','/source/AirCube.kicad_pcb','/source/AirCube.kicad_sch','/models/esp32-h2-mini-1.json','/dashboard/','/dashboard/js/app.js','/dashboard/js/intelligence/index.js','/dev-login','/dashboard/firmware/manifest.json']){
    const r=await fetch(base+url,{redirect:'manual'});assert.equal(r.status,303);assert.equal(r.headers.get('location'),'/login');
   }
   assert.equal((await fetch(base+'/api/health')).status,200);

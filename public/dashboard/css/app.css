@@ -82,8 +82,9 @@ a {
 }
 
 .page-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.6px;
   margin: 0;
 }
 
@@ -102,7 +103,7 @@ a {
 .btn {
   background: var(--card);
   border: 1px solid rgb(var(--card-border-rgb) / 0.8);
-  border-radius: 10px;
+  border-radius: 3px;
   padding: 7px 14px;
   cursor: pointer;
   transition: border-color 0.12s ease, background 0.12s ease;
@@ -144,7 +145,7 @@ a {
   place-items: center;
   background: var(--card);
   border: 1px solid rgb(var(--card-border-rgb) / 0.6);
-  border-radius: 16px;
+  border-radius: 3px;
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
@@ -215,8 +216,8 @@ a {
 .pill {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
-  border-radius: 999px;
+  padding: 3px 9px;
+  border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
@@ -241,15 +242,15 @@ a {
 
 .pill-picker {
   display: inline-flex;
-  gap: 4px;
-  padding: 3px;
+  gap: 2px;
+  padding: 2px;
   background: var(--pill-track);
-  border-radius: 999px;
+  border-radius: 4px;
 }
 .pill-picker button {
   background: transparent;
   border: none;
-  border-radius: 12px;
+  border-radius: 3px;
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 500;
@@ -334,7 +335,7 @@ input[type="number"],
 select {
   background: var(--card);
   border: 1px solid var(--card-border);
-  border-radius: 10px;
+  border-radius: 3px;
   padding: 6px 10px;
   color: var(--text);
   font: inherit;
@@ -693,7 +694,7 @@ button:focus-visible {
   padding: 6px;
   background: var(--card);
   border: 1px solid var(--card-border);
-  border-radius: 10px;
+  border-radius: 4px;
   box-shadow: var(--shadow);
 }
 .menu button {
@@ -779,7 +780,7 @@ button:focus-visible {
   padding: 10px 12px;
   background: var(--bg);
   border: 1px solid var(--card-border);
-  border-radius: 10px;
+  border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.5;
@@ -811,7 +812,7 @@ button:focus-visible {
 .toast {
   background: var(--card);
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: 4px;
   padding: 9px 16px;
   font-size: 12px;
   box-shadow: var(--shadow);
@@ -826,8 +827,8 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 18px;
-  border-radius: 18px;
+  padding: 12px 16px;
+  border-radius: 4px;
   background: rgb(var(--accent-rgb) / 0.12);
   border: 1px solid rgb(var(--accent-rgb) / 0.3);
   font-size: 12px;

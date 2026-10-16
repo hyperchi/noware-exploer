@@ -8,8 +8,9 @@
 
 import { h, clear, pillPicker, toggle, toast, confirmDialog } from "../ui.js";
 import { prefs, applyAppearance } from "../prefs.js";
+import { householdSection } from "./household-settings.js";
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "2.0.0";
 
 function row(label, control, sub) {
   return h(
@@ -36,12 +37,13 @@ function numberField(value, { min, max, step = 1, disabled = false, onCommit }) 
 }
 
 export class SettingsView {
-  constructor(registry, { onBack, onFlash }) {
+  constructor(registry, { onBack, onFlash, feed }) {
     this.registry = registry;
     this.onBack = onBack;
     this.onFlash = onFlash;
 
     this.deviceSection = h("div");
+    this.householdSection = feed ? householdSection(feed) : h("div");
 
     this.el = h(
       "div.column.narrow",
@@ -56,6 +58,7 @@ export class SettingsView {
         }),
         h("h1.detail-title", { text: "Settings" }),
       ),
+      this.householdSection,
       this._displaySection(),
       this.deviceSection,
       this._firmwareSection(),
@@ -124,7 +127,7 @@ export class SettingsView {
       h("h2.section-label", { text: "About" }),
       h(
         "div.card.settings-group",
-        row("Noware dashboard", h("span.faint", { text: `v${APP_VERSION}` })),
+        row("noware air intelligence", h("span.faint", { text: `v${APP_VERSION}` }), "Environmental guidance, not medical advice. Simulated data is always labelled."),
         row(
           "Based on",
           h("a", {

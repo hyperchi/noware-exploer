@@ -98,6 +98,27 @@ The library includes two proposed solution entries separate from the 44 installe
 
 The design simulator is now USB-C-only. Legacy battery settings are removed when restoring saved state. Controls expose the 5 V source current budget, radio rail current/voltage and conversion efficiency. Results show USB input watts, Wh/day, average and peak input current, and headroom; neither battery runtime nor USB PD negotiation is modeled. The default 500 mA is an editable planning input, not a guarantee of any USB source. Supply availability must be established from the actual source, cable and advertised/negotiated capability.
 
+## Air intelligence (dashboard)
+
+`/dashboard/` is no longer a sensor console. It answers, for each room: what is in the air, whether that is normal for this home, what probably caused it, what to do, whether it worked, and whether to ask your contractor. The numbers stay visible under every conclusion. See [docs/AIR_INTELLIGENCE_ARCHITECTURE.md](docs/AIR_INTELLIGENCE_ARCHITECTURE.md) for the design and [docs/MAC_MINI_AIRCUBE_GATEWAY.md](docs/MAC_MINI_AIRCUBE_GATEWAY.md) for running the headless collector on the office Mac mini.
+
+- Engine: `lib/air-intelligence/` (pure ES modules, shared by server, browser and tests). Capabilities come from the device's frames: the AirCube with the SEN63C reports PM1/PM2.5/PM4/PM10 and true CO2; a legacy Base has neither and is treated accordingly.
+- Server: `/api/home` (homeowner) and `/api/contractor` (contractor), authorization in `lib/authz.js`, store in `lib/home-store.js` (memory, or a JSON file when `NOWARE_DATA_DIR` is set).
+- Gateway: `gateway/` publishes a USB cube to the relay with a bearer token (`GATEWAY_TOKENS=<token>:<owner email>` on the server). The browser path (Web Serial) still works and is used on laptops.
+- Demo: outside production (`NODE_ENV` not `production`, or `NOWARE_DEMO=1`) the first sign-in seeds a demo household, contractor and customers with simulated data, always labelled. Set `NOWARE_DEMO=0` to disable. Production never seeds.
+- Simulator: every room can run a scenario (home menu "Try a scenario", or the room menu). Scenarios cover healthy, cooking, repeated cooking, cleaning, dust, outdoor pollution, overnight ventilation, persistent particles, shower, high humidity, pet/allergy context, sensor offline, warm-up, equipment before/after, unknown mixed and a legacy Base cube.
+
+Verification:
+
+```sh
+npm test
+npm run build
+SESSION_SECRET=<secret> NODE_ENV=development PORT=8089 node server.js
+SESSION_SECRET=<same secret> TEST_URL=http://localhost:8089 node scripts/air-browser-check.mjs
+```
+
+Environmental guidance only, never medical advice. Simulated data is always labelled as such.
+
 ## Deploy from GitHub
 
 Push to `main` to validate and deploy automatically to https://noware.so on GCP. You can also use [Actions → Deploy noware to GCP](https://github.com/hyperchi/noware-exploer/actions/workflows/deploy-gcp.yml) and select **Run workflow** on `main`. Pull requests run checks without production access. Keyless GCP authentication and repository deployment variables are configured; the runtime login secret stays in Secret Manager. See `infrastructure/README.md` for permissions and deployment details.

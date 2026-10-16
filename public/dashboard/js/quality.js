@@ -58,17 +58,17 @@ function bandScore(value, thresholds) {
   return 100;
 }
 
-/** Overall verdict: worst of VOC and available measured CO2. */
+/** Overall verdict: worst of VOC and, on Pro, true CO2. */
 export function readingQuality(r) {
   let q = vocQuality(r.etvoc);
-  if (r.hasTrueCo2) q = Math.max(q, co2Quality(r.co2));
+  if (r.hasTrueCo2 ?? r.isPro) q = Math.max(q, co2Quality(r.co2));
   return q;
 }
 
 /** 0-100 air score, lower is better. */
 export function airScore(r) {
   let score = bandScore(r.etvoc, VOC_SCORE_THRESHOLDS);
-  if (r.hasTrueCo2) score = Math.max(score, bandScore(r.co2, CO2_SCORE_THRESHOLDS));
+  if (r.hasTrueCo2 ?? r.isPro) score = Math.max(score, bandScore(r.co2, CO2_SCORE_THRESHOLDS));
   return Math.round(score);
 }
 
@@ -101,10 +101,6 @@ export function tempTileStatus(c) {
   return "Hot";
 }
 
-/** Match particulate severity to the AirCube dashboard bands.
- * @param {number} ugm3
- * @returns {number}
- */
 export function pm25Quality(ugm3) {
   if (ugm3 <= 9.0) return GOOD;
   if (ugm3 <= 35.4) return FAIR;
@@ -112,21 +108,17 @@ export function pm25Quality(ugm3) {
   return BAD;
 }
 
-/** Describe the particulate band independently of the overall VOC/CO2 score.
- * @param {number} ugm3
- * @returns {string}
- */
 export function pm25TileStatus(ugm3) {
   if (ugm3 <= 9.0) return "Low";
-  if (ugm3 <= 35.4) return "Moderate";
+  if (ugm3 <= 35.4) return "Elevated";
   if (ugm3 <= 55.4) return "High";
   return "Very high";
 }
 
 export function tileStatusQuality(key, value) {
   if (key === "co2") return co2Quality(value);
-  if (key === "voc") return vocQuality(value);
   if (key === "pm25") return pm25Quality(value);
+  if (key === "voc") return vocQuality(value);
   if (key === "hum") return value < 30 || value > 60 ? FAIR : GOOD;
   if (key === "temp") {
     if (value >= 18 && value < 26) return GOOD;
@@ -140,13 +132,13 @@ export function tileStatus(key, value) {
   const text =
     key === "co2"
       ? co2TileStatus(value)
+      : key === "pm25"
+        ? pm25TileStatus(value)
       : key === "voc"
         ? vocTileStatus(value)
-        : key === "pm25"
-          ? pm25TileStatus(value)
-          : key === "hum"
-            ? humTileStatus(value)
-            : tempTileStatus(value);
+        : key === "hum"
+          ? humTileStatus(value)
+          : tempTileStatus(value);
   return { text, quality: tileStatusQuality(key, value) };
 }
 
@@ -157,7 +149,7 @@ export function tileStatus(key, value) {
  * in the metric's display unit; null means unbounded on that side. */
 const ZONES = {
   pm25: [
-    { from: 9, to: 35.4, level: FAIR, label: "Moderate" },
+    { from: 9, to: 35.4, level: FAIR, label: "Elevated" },
     { from: 35.4, to: 55.4, level: POOR, label: "High" },
     { from: 55.4, to: null, level: BAD, label: "Very high" },
   ],
@@ -222,9 +214,9 @@ const SEGMENT_MAX_SEQ_GAP = 3;
 const SEGMENT_MAX_TIME_GAP_S = 1200;
 
 export const HISTORY_METRICS = [
+  { key: "pm25", label: "PM2.5", unit: "µg/m³", colorClass: "m-pm", decimals: 1, requires: "pm" },
   { key: "co2", label: "CO2", unit: "ppm", colorClass: "m-co2", decimals: 0 },
   { key: "voc", label: "VOC", unit: "ppb", colorClass: "m-voc", decimals: 0 },
-  { key: "pm25", label: "PM2.5", unit: "µg/m³", colorClass: "m-pm", decimals: 1 },
   { key: "temp", label: "Temperature", unit: "°", colorClass: "m-temp", decimals: 1 },
   { key: "hum", label: "Humidity", unit: "%", colorClass: "m-hum", decimals: 1 },
 ];
@@ -239,12 +231,12 @@ export const HISTORY_RANGES = [
 /** avg/min/max for one metric out of a history slot. */
 export function slotValues(metricKey, s) {
   switch (metricKey) {
+    case "pm25":
+      return [s.pm25Avg, s.pm25Min, s.pm25Max];
     case "co2":
       return [s.co2Avg, s.co2Min, s.co2Max];
     case "voc":
       return [s.etvocAvg, s.etvocMin, s.etvocMax];
-    case "pm25":
-      return [s.pm25Avg, s.pm25Min, s.pm25Max];
     case "temp":
       return [s.tempAvg, s.tempMin, s.tempMax];
     default:
@@ -255,12 +247,12 @@ export function slotValues(metricKey, s) {
 /** Instantaneous value for one chart metric from a live serial reading. */
 export function liveMetricValue(metricKey, reading) {
   switch (metricKey) {
-    case "co2":
-      return reading.hasTrueCo2 ? reading.co2 : reading.pmPresent ? NaN : reading.eco2;
-    case "voc":
-      return reading.etvoc;
     case "pm25":
       return reading.pmValid ? reading.pm25 : NaN;
+    case "co2":
+      return (reading.hasTrueCo2 ?? reading.isPro) ? reading.co2 : reading.eco2;
+    case "voc":
+      return reading.etvoc;
     case "temp":
       return reading.temperatureC;
     default:
@@ -268,7 +260,7 @@ export function liveMetricValue(metricKey, reading) {
   }
 }
 
-export const metricFloor = (key) => (key === "co2" ? CO2_VALID_FLOOR : key === "pm25" ? -0.1 : 0);
+export const metricFloor = (key) => (key === "co2" ? CO2_VALID_FLOOR : key === "pm25" ? -0.1 : key === "temp" ? -100 : 0);
 
 /** Wrapping u16 sequence distance (sequences wrap at 0xFFFE). */
 export const seqDistance = (newer, older) => (newer - older) & 0xffff;

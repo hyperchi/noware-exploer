@@ -16,7 +16,8 @@ export function homeRouter({ store, service, env = process.env }) {
     if (req.session?.gateway) return res.status(403).json({ error: 'Gateways may only publish readings.' });
     // In demo mode the first signed-in person gets the seeded home so the
     // product can be explored without hardware. Never in production.
-    if (demoEnabled(env) && req.session?.email && !store.getHousehold(DEMO_HOUSEHOLD_ID)?.members.includes(req.session.email.toLowerCase())) {
+    // Simulations live in memory, so a restarted server re-seeds them too.
+    if (demoEnabled(env) && req.session?.email && (!store.getHousehold(DEMO_HOUSEHOLD_ID)?.members.includes(req.session.email.toLowerCase()) || !service.demoRunning())) {
       seedDemo({ store, service, userEmail: req.session.email.toLowerCase(), userName: req.session.name, timeZone: env.NOWARE_TIMEZONE || 'America/Los_Angeles' });
     }
     req.principal = principalFor(req.session, store, { env });

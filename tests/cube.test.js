@@ -41,7 +41,7 @@ test('shared cube relay: publish, read back, one publisher at a time, login requ
 
 test('gateway publishes with a bearer token and nothing else',async()=>{
  process.env.SESSION_SECRET='test-only-secret'.repeat(4);
- process.env.GATEWAY_TOKENS='gateway-token-for-tests-0123456789abcdef, short';
+ process.env.GATEWAY_TOKENS='gateway-token-for-tests-0123456789abcdef, short, owned-gateway-token-0123456789abcdefgh:owner@noso.so';
  const seen=[];
  const server=createApp({onLive:(readings,store)=>seen.push([readings.length,store.publisher.kind])}).listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
  const base='http://127.0.0.1:'+server.address().port;
@@ -59,5 +59,9 @@ test('gateway publishes with a bearer token and nothing else',async()=>{
   const cookie=sessionCookie(await createSession({email:'person@noso.so',sub:'123'},{secret:process.env.SESSION_SECRET,domain:'noso.so'}));
   const view=await fetch(base+'/api/cube?me=viewer',{headers:{cookie}}).then(r=>r.json());
   assert.equal(view.publisherKind,'gateway');assert.equal(view.publisher,'office-mac-mini');assert.equal(view.meta.deviceKey,'aircube-office');assert.ok(view.lastHeartbeat>0);
+  // A token with an owner publishes as that owner, so the cube lands in their home.
+  await new Promise(r=>setTimeout(r,50));
+  const owned=await fetch(base+'/api/cube/live',{method:'POST',headers:headers('owned-gateway-token-0123456789abcdefgh'),body:JSON.stringify({publisher:'gateway-office-02',sentAt:Date.now()/1000+40,readings:[],meta:{name:'Owned'}})});
+  assert.ok(owned.status===200||owned.status===409);
  }finally{await new Promise(r=>server.close(r));delete process.env.SESSION_SECRET;delete process.env.GATEWAY_TOKENS;}
 });

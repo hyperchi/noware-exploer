@@ -246,3 +246,14 @@ back in and the gateway reconnects on its own (`cube connected` in the log).
 
 Capture files are the replay source for the dashboard's scenario replay: one
 JSON object per line, timestamp in unix seconds, `source: "physical"`.
+
+
+## Which home the cube belongs to
+
+The server attaches a gateway's cube to the household of the token's owner. Append the owner's sign-in email to the token entry on the server:
+
+```
+GATEWAY_TOKENS=<token>:winston@noso.so
+```
+
+Several gateways use a comma-separated list. The room is the one named by `AIRCUBE_ROOM` (created if missing); the device key `AIRCUBE_DEVICE_KEY` keeps the same room across restarts. A token without an owner still publishes to the shared relay, but the air-intelligence home view cannot place the cube in a room.

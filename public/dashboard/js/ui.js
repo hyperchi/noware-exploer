@@ -33,6 +33,12 @@ export function h(spec, props, ...children) {
   return node;
 }
 
+/** replaceChildren that drops null/false, so conditional children never print "null". */
+export function fill(node, ...children) {
+  node.replaceChildren(...children.flat(Infinity).filter((c) => c != null && c !== false));
+  return node;
+}
+
 export const clear = (node) => {
   while (node.firstChild) node.firstChild.remove();
   return node;

@@ -7,7 +7,8 @@ import {homeRouter} from './api/home.js';
 import {contractorRouter} from './api/contractor.js';
 import {createHomeStore} from './lib/home-store.js';
 import {HomeService} from './lib/home-service.js';
-import {readSession,getCookie,SESSION_COOKIE} from './lib/session.js';
+import {demoEnabled,seedDemo} from './lib/demo-seed.js';
+import {readSession,getCookie,SESSION_COOKIE,createSession,sessionCookie} from './lib/session.js';
 import {ALLOWED_DOMAIN} from './lib/auth-policy.js';
 
 export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={}){
@@ -15,6 +16,8 @@ export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={})
  const store=homeStore||createHomeStore();
  const service=homeService||new HomeService({store});
  app.locals.homeStore=store;app.locals.homeService=service;
+ // Outside production, a first-time publisher joins the seeded demo home instead of getting a bare one.
+ if(!service.beforeCreateHousehold)service.beforeCreateHousehold=email=>{if(demoEnabled())seedDemo({store,service,userEmail:email,timeZone:process.env.NOWARE_TIMEZONE||'America/Los_Angeles'})};
  const dist=fileURLToPath(new URL('./dist/',import.meta.url));
  app.disable('x-powered-by');
  app.use((req,res,next)=>{res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');res.setHeader('Cross-Origin-Opener-Policy','same-origin-allow-popups');next()});
@@ -34,6 +37,11 @@ export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={})
  const publicStatic=dir=>express.static(path.join(dist,dir),{dotfiles:'deny',etag:false,lastModified:false,setHeaders:res=>res.setHeader('Cache-Control','public, max-age=86400')});
  app.use('/assets',publicStatic('assets'));
  app.use('/showcase',publicStatic('showcase'));
+ // Local development only: DEV_LOGIN_EMAIL mints a session without Google.
+ // Registered solely when NODE_ENV is not production, so it cannot exist on Cloud Run.
+ if(process.env.DEV_LOGIN_EMAIL && process.env.NODE_ENV!=='production' && process.env.SESSION_SECRET){
+  app.get('/dev-login',async(req,res)=>{const email=process.env.DEV_LOGIN_EMAIL.toLowerCase();res.setHeader('Set-Cookie',sessionCookie(await createSession({email,sub:'dev-login',name:email.split('@')[0]},{secret:process.env.SESSION_SECRET,domain:ALLOWED_DOMAIN})));res.redirect(303,'/dashboard/')});
+ }
  app.get('/login', (req,res)=>res.sendFile(path.join(dist,'login.html')));
  app.get('/login.html', (req,res)=>res.redirect(308,'/login'));
  for(const file of ['login.js','favicon.ico'])app.get('/'+file,(req,res)=>res.sendFile(path.join(dist,file)));

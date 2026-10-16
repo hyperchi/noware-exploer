@@ -1,11 +1,11 @@
 /* User preferences, mirroring the tray's Display settings.
- * Appearance defaults to dark and temperature to Fahrenheit, as on iOS.
+ * Appearance defaults to light (the noware identity) and temperature to Fahrenheit.
  */
 
 const KEY = "aircube.prefs";
 
 const DEFAULTS = {
-  appearance: "dark", // "dark" | "light" | "system"
+  appearance: "light", // "dark" | "light" | "system"
   useFahrenheit: true,
 };
 

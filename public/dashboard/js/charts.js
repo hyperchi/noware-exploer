@@ -189,8 +189,18 @@ export class HistoryChart {
     this.format = (v) => String(v);
     this.pendingRender = false;
 
+    this.events = [];
     this.observer = new ResizeObserver(() => this._resize());
     this.observer.observe(host);
+  }
+
+  /**
+   * Event regions to shade behind the series: [{startedAt, endedAt|null,
+   * color: '--css-var', label}]. Drawn on the next render/redraw.
+   */
+  setEvents(events) {
+    this.events = events || [];
+    if (this.plot) this.plot.redraw();
   }
 
   _resize() {
@@ -341,7 +351,7 @@ export class HistoryChart {
       ],
       hooks: {
         // Axes draw before series, so bands sit behind the line.
-        drawAxes: [(u) => this._drawZones(u)],
+        drawAxes: [(u) => { this._drawEvents(u); this._drawZones(u); }],
         setCursor: [
           (u) => {
             const idx = u.cursor.idx;
@@ -356,6 +366,39 @@ export class HistoryChart {
     };
 
     this.plot = new uPlot(opts, this.data, this.host);
+  }
+
+  /** Shaded time regions with a label, one per detected air event. */
+  _drawEvents(u) {
+    if (!this.events?.length) return;
+    const { ctx, bbox } = u;
+    const dpr = uPlot.pxRatio || 1;
+    const [xMin, xMax] = this.xRange || [u.scales.x.min, u.scales.x.max];
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bbox.left, bbox.top, bbox.width, bbox.height);
+    ctx.clip();
+    ctx.font = `600 ${10 * dpr}px ${cssVar(document.documentElement, "--font") || "sans-serif"}`;
+    ctx.textAlign = "left";
+    let idx = 0;
+    for (const e of this.events) {
+      const start = Math.max(e.startedAt, xMin);
+      const end = Math.min(e.endedAt ?? xMax, xMax);
+      if (end <= start) continue;
+      const color = cssVar(this.host, e.color || "--m-voc") || "#888";
+      const x0 = u.valToPos(start, "x", true);
+      const x1 = u.valToPos(end, "x", true);
+      ctx.fillStyle = withAlpha(color, 0.1);
+      ctx.fillRect(x0, bbox.top, Math.max(2 * dpr, x1 - x0), bbox.height);
+      ctx.fillStyle = withAlpha(color, 0.6);
+      ctx.fillRect(x0, bbox.top, 1.5 * dpr, bbox.height);
+      if (e.label && x1 - x0 > 30 * dpr) {
+        ctx.fillStyle = color;
+        ctx.fillText(e.label, x0 + 4 * dpr, bbox.top + 12 * dpr * (1 + (idx % 3)));
+        idx++;
+      }
+    }
+    ctx.restore();
   }
 
   /** Tinted band, dashed edge and label for each zone inside the y range. */

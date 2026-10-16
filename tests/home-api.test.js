@@ -6,6 +6,7 @@ import { HomeStore } from '../lib/home-store.js';
 import { HomeService } from '../lib/home-service.js';
 import { seedDemo, DEMO_HOUSEHOLD_ID, DEMO_CONTRACTOR_ID } from '../lib/demo-seed.js';
 import { generateReadings } from '../lib/air-intelligence/index.js';
+import { createCubeStore } from '../api/cube.js';
 
 const SECRET = 'test-only-secret'.repeat(4);
 
@@ -14,7 +15,8 @@ async function boot({ demo = false } = {}) {
   process.env.NOWARE_DEMO = demo ? '1' : '0';
   const store = new HomeStore();
   const service = new HomeService({ store });
-  const server = createApp({ homeStore: store, homeService: service }).listen(0, '127.0.0.1');
+  const cubeStore = createCubeStore();
+  const server = createApp({ homeStore: store, homeService: service, cubeStore }).listen(0, '127.0.0.1');
   await new Promise((r) => server.once('listening', r));
   const base = `http://127.0.0.1:${server.address().port}`;
   const cookieFor = async (email, name) => sessionCookie(await createSession({ email, sub: email, name }, { secret: SECRET, domain: 'noso.so' }));
@@ -29,7 +31,7 @@ async function boot({ demo = false } = {}) {
     delete process.env.SESSION_SECRET;
     delete process.env.NOWARE_DEMO;
   };
-  return { store, service, base, cookieFor, api, close };
+  return { store, service, base, cookieFor, api, close, cubeStore };
 }
 
 test('authorization: homeowners see their home, contractors only consenting customers, strangers nothing', async () => {
@@ -151,7 +153,8 @@ test('homeowner flows: summary, numbers, ack, feedback, contact payload, report,
 });
 
 test('a physical cube published through the relay lands in the publisher\'s own home, labelled physical (flow A)', async () => {
-  const { store, service, cookieFor, api, close, base } = await boot();
+  const { store, service, cookieFor, api, close, base, cubeStore } = await boot();
+  process.env.GATEWAY_TOKENS = 'owned-gateway-token-0123456789abcdefgh:winston@noso.so';
   try {
     const cookie = await cookieFor('winston@noso.so', 'Winston');
     const owner = api(cookie);
@@ -173,7 +176,15 @@ test('a physical cube published through the relay lands in the publisher\'s own 
     assert.equal(s.json.contractorInsights.length, 0, 'two minutes of clean data creates no lead');
     assert.equal(s.json.measurements.find((m) => m.channel === 'pm25').baseline.kind, 'reference', 'no personal baseline claimed yet');
     assert.equal((await owner('POST', `/api/home/households/${hid}/contact`, { type: 'message' })).status, 409, 'no contractor connected: nothing invented');
+    // The headless gateway, with a token owned by the same person, attaches its cube to a named room of the same home.
+    cubeStore.publisher.lastSeen -= 120; // the laptop went quiet; the gateway may take over
+    const gw = await fetch(`${base}/api/cube/live`, { method: 'POST', headers: { authorization: 'Bearer owned-gateway-token-0123456789abcdefgh', 'x-noware-gateway': 'mac-mini', 'content-type': 'application/json' }, body: JSON.stringify({ publisher: 'gateway-office-01', sentAt: Date.now() / 1000 + 60, readings: readings.map((r) => ({ ...r, timestamp: r.timestamp + 200 })), meta: { name: 'Office cube', roomName: 'Study', deviceKey: 'aircube-study', source: 'physical' } }) });
+    assert.equal(gw.status, 200);
+    const h2 = await owner('GET', `/api/home/households/${hid}`);
+    const study = h2.json.household.rooms.find((r) => r.name === 'Study');
+    assert.ok(study && study.devices.some((d) => d.key === 'aircube-study'), 'gateway cube attached to the Study room of the owner\'s home');
   } finally {
+    delete process.env.GATEWAY_TOKENS;
     await close();
   }
 });

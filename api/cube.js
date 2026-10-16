@@ -81,16 +81,23 @@ function cleanMeta(meta, previous) {
 /**
  * Bearer-token authentication for headless publishers (the Mac mini gateway).
  * Tokens come from the GATEWAY_TOKENS environment variable, comma separated,
- * each at least 32 characters. When the variable is unset no gateway can
- * publish; browser publishers always use the normal Google session instead.
+ * each at least 32 characters, optionally followed by ":owner@example.com":
+ * the owner's household is where that gateway's cube is attached. When the
+ * variable is unset no gateway can publish; browser publishers always use the
+ * normal Google session instead.
  */
 export function gatewayPrincipal(req, env = process.env) {
   const header = req.headers.authorization || '';
   if (!header.startsWith('Bearer ')) return null;
   const token = header.slice(7).trim();
-  const allowed = (env.GATEWAY_TOKENS || '').split(',').map(t => t.trim()).filter(t => t.length >= 32);
-  if (!token || !allowed.includes(token)) return null;
-  return {kind: 'gateway', email: str(req.headers['x-noware-gateway'] || 'gateway', 60), token};
+  const entries = (env.GATEWAY_TOKENS || '').split(',').map(t => t.trim()).filter(Boolean).map(t => {
+    const i = t.indexOf(':');
+    return i > 0 ? {token: t.slice(0, i), owner: t.slice(i + 1).trim().toLowerCase()} : {token: t, owner: ''};
+  }).filter(e => e.token.length >= 32);
+  const match = token ? entries.find(e => e.token === token) : null;
+  if (!match) return null;
+  const label = str(req.headers['x-noware-gateway'] || 'gateway', 60);
+  return {kind: 'gateway', email: match.owner.includes('@') ? match.owner : label, label, owner: match.owner || null, token};
 }
 
 export function cubeRouter(store = createCubeStore(), {onLive, onHistory} = {}) {
@@ -156,6 +163,7 @@ export function cubeRouter(store = createCubeStore(), {onLive, onHistory} = {}) 
     const slots = (Array.isArray(req.body.slots) ? req.body.slots.slice(-MAX_SLOTS) : [])
       .map(s => cleanSlot(s, offset)).filter(Boolean).sort((a, b) => a.timestamp - b.timestamp);
     store.slots = slots;
+    if (req.body.meta) store.meta = cleanMeta(req.body.meta, store.meta);
     store.windowS = finite(req.body.windowS) && req.body.windowS > 0 ? req.body.windowS : 300;
     store.lastSyncedAt = now();
     store.historyVersion++;

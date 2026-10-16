@@ -67,6 +67,8 @@ export class SharePublisher {
         isPro: device.isPro,
         fwVersion: device.fwVersion,
         ledPercent: device.ledPercent,
+        source: "physical",
+        roomName: device.roomName || "",
       },
     });
     if (res.status === 409) {
@@ -112,7 +114,7 @@ export class RemoteDevice extends EventTarget {
     this.id = "shared";
     this.slot = -1;
     this.isRemote = true;
-    this.name = "Noware";
+    this.name = "noware";
     this.publisher = "";
     this.isPro = false;
     this.fwVersion = "";
@@ -149,7 +151,7 @@ export class RemoteDevice extends EventTarget {
   }
 
   get modelLabel() {
-    return this.isPro ? "Noware Pro" : "Noware Base";
+    return this.lastReading?.pmPresent ? "noware + particles" : this.isPro ? "noware Pro" : "noware Base";
   }
 
   get lastUpdated() {
@@ -160,8 +162,11 @@ export class RemoteDevice extends EventTarget {
   apply(body, offset) {
     this.publisher = body.publisher;
     this.online = body.online;
-    this.name = body.meta.name || "Noware";
+    this.name = body.meta.name || "noware";
     this.isPro = body.meta.isPro;
+    this.publisherKind = body.publisherKind || "";
+    this.lastHeartbeat = body.lastHeartbeat ? body.lastHeartbeat + offset : 0;
+    this.source = body.meta.source || "physical";
     this.fwVersion = body.meta.fwVersion;
     this.ledPercent = body.meta.ledPercent;
     for (const r of body.live) {
