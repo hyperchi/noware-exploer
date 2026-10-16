@@ -1,10 +1,13 @@
 /* Presentation only: both values already share EPA PM2.5 + NowCast math. */
 import { h, openModal, fill, toast } from './ui.js';
 import { homeApi } from './home-api.js';
+import { measurementIsLive } from './intelligence/live-measurements.js';
 
 export function aqiPanel(room, feed, onLocation) {
   const comparison = room.aqiComparison;
   if (!comparison) return null;
+  const live = measurementIsLive({ state: room.deviceHealth.state, measuredAt: room.deviceHealth.lastReadingAt, now: Date.now() / 1000 });
+  const indoor = live ? comparison.indoor : { state: 'unavailable', reason: 'Waiting for usable live sensor readings.' };
   const area = feed.household?.household?.location;
   const card = (title, result, outside = false) => {
     const ready = result.state === 'available';
@@ -21,8 +24,8 @@ export function aqiPanel(room, feed, onLocation) {
   return h('section.simple-section.aqi-section',
     h('div.simple-section-head', h('div', h('h2', { text: 'Your room & outside' }), h('p', { text: 'One standard. One calculation. A clearer comparison.' })),
       h('button.simple-button', { type: 'button', text: area ? 'Change area' : 'Set your location', 'data-focus': 'aqi-location', onclick: onLocation })),
-    h('div.aqi-pair', card(room.roomName, comparison.indoor), card(area?.label ? `Outside · ${area.label.split(',')[0]}` : 'Outside near you', comparison.outdoor, true)),
-    h('div.aqi-comparison', { text: comparison.explanation }),
+    h('div.aqi-pair', card(room.roomName, indoor), card(area?.label ? `Outside · ${area.label.split(',')[0]}` : 'Outside near you', comparison.outdoor, true)),
+    h('div.aqi-comparison', { text: live ? comparison.explanation : 'Both values use the same US EPA PM2.5 scale and NowCast calculation.' }),
     h('details.simple-disclosure', { 'data-key': 'aqi-method' }, h('summary', { text: 'How these AQI numbers compare', 'data-focus': 'aqi-method' }),
       h('p', { text: comparison.note }),
       h('p', { text: 'Both use the US EPA PM2.5 breakpoints updated in 2024, the same completed-hour window, and the same weighting rules. The AirCube’s VOC index is not used. Current sensor values below may change faster than this hourly index.' }),

@@ -7,7 +7,7 @@
 
 const HOME = "/api/home";
 const CONTRACTOR = "/api/contractor";
-const POLL_MS = 5000;
+const POLL_MS = 2000;
 
 async function call(method, path, body) {
   const res = await fetch(path, {

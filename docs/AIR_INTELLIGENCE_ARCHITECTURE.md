@@ -178,7 +178,11 @@ Validation: `npm test` includes source-pattern, near-zero baseline, persistence 
 
 ## Comparable AQI, source history and everyday settings
 
-The local companion view keeps the original device dashboard available. Its layout follows the existing Noware / NOSO sites: white space, strong Inter typography, fine borders, small mono labels and restrained accents. The overview includes status, action, inside/outside comparison, actual readings, source patterns and the timeline. It uses real device history when connected; no fixture data is seeded into the live preview.
+The local companion view keeps the original device dashboard available. Its layout follows the existing Noware / NOSO sites: white space, strong Inter typography, fine borders, small mono labels and restrained accents. Recent air events appear immediately below the overview, followed by recovery, inside/outside comparison, actual readings and source patterns. It uses real device history when connected; no fixture data is seeded into the live preview.
+
+Measurement cards pair the latest raw value with a trailing five-minute, time-weighted average from `live-measurements.js`. Raw samples cover only the interval until the next frame, capped at the 20-second freshness limit. History rollups, other provenance, invalid frames, warm-up and faults cannot fill gaps. Windows with less than 90% coverage explicitly show collection progress. A small dot pulses only when a newer sample arrives; the timestamp continues aging between API responses, and the browser independently removes the live indicator after 20 seconds. Reduced-motion preferences disable the pulse. These short-term averages do not change the shared hourly AQI comparison method.
+
+The home summary polls every two seconds. Four additional deterministic tests cover time weighting, rolling-window boundaries, partial coverage and provenance exclusions, raw-versus-average values, units, and freshness expiry without another API response (96 total passing tests). Desktop and 390/320 px layouts were checked locally. The physical collector was disconnected during this final UI check; the page correctly withheld live badges and current averages, and no fixture readings were inserted into the live home.
 
 ### One AQI standard
 
