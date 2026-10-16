@@ -104,7 +104,7 @@ export class ScenarioSource extends EventTarget {
     this.outdoor = scenario.outdoor ? { ...unavailableOutdoor(), status: "available", provider: "scenario", fetchedAt: Date.now() / 1000, ...scenario.outdoor } : unavailableOutdoor();
     this.speed = speed;
     this.random = rng(7);
-    const start = offsetS ?? Math.min(scenario.durationS * 0.3, 900);
+    const start = offsetS ?? scenario.demoOffsetS ?? Math.min(scenario.durationS * 0.3, 900);
     this.startWall = Date.now() / 1000 - start;
     this.cursorS = 0;
     this.serviceEvents = scenarioServiceEvents(scenario, { endT: this.startWall, householdId: "local" });
@@ -119,10 +119,13 @@ export class ScenarioSource extends EventTarget {
     const offline = this.scenario.device?.offlineAfterS;
     const batch = [];
     while (this.cursorS <= target && batch.length < 4000) {
-      if (offline == null || this.cursorS <= offline) batch.push(readingAt(this.scenario, this.cursorS, this.startWall, this.random));
+      if (offline == null || this.cursorS <= offline) {
+        const reading = readingAt(this.scenario, this.cursorS, this.startWall, this.random);
+        reading.timestamp = this.startWall + this.cursorS / this.speed;
+        batch.push(reading);
+      } else { this.cursorS = target + 1; break; }
       this.cursorS++;
     }
-    for (let i = 0; i < batch.length; i++) batch[i].timestamp = this.startWall + (this.cursorS - batch.length + i) / this.speed;
     if (batch.length) {
       this.engine.setConnection({ connected: offline == null || this.cursorS <= offline, heartbeatAt: wallNow });
       this.engine.ingestReadings(batch, { heartbeatAt: wallNow });
@@ -135,6 +138,8 @@ export class ScenarioSource extends EventTarget {
     const e = this.engine;
     for (const s of e.samples) s.t -= seconds;
     for (const s of e.slotSamples) s.t -= seconds;
+    for (const s of e.archive) s.t -= seconds;
+    if (e.aggregate) e.aggregate.start -= seconds;
     if (e.slotCoverage) { e.slotCoverage.from -= seconds; e.slotCoverage.to -= seconds; }
     for (const ev of e.events) { ev.startedAt -= seconds; if (ev.endedAt) ev.endedAt -= seconds; if (ev.peak) ev.peak.t -= seconds; for (const a of ev.acknowledgedActions || []) a.at -= seconds; }
     e.lastReadingAt -= seconds; e.firstSampleAt -= seconds; if (e.lastReading) e.lastReading.timestamp -= seconds;
