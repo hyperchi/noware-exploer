@@ -11,6 +11,7 @@
 // service (lib/home-service.js) through the onLive hook, which is where
 // events, baselines and contractor insights are derived.
 import express from 'express';
+import {createHash} from 'node:crypto';
 
 const LIVE_WINDOW_S = 3600;
 const ONLINE_WINDOW_S = 20;
@@ -42,15 +43,18 @@ export function createCubeStore() {
 export function cleanReading(r, offset = 0) {
   if (!r || typeof r !== 'object' || !finite(r.timestamp)) return null;
   const out = {timestamp: r.timestamp + offset};
-  for (const key of READING_NUMBERS) out[key] = finite(r[key]) ? r[key] : 0;
+  for (const key of READING_NUMBERS) out[key] = finite(r[key]) ? r[key] : null;
   for (const key of READING_FLAGS) out[key] = r[key] === true;
   // Readings without validity flags come from older publishers: trust them
   // the way the old dashboard did, rather than withholding every channel.
-  if (r.tempValid === undefined) out.tempValid = true;
-  if (r.humValid === undefined) out.humValid = true;
-  if (r.etvocValid === undefined) out.etvocValid = true;
+  out.tempValid = r.tempValid !== false && finite(r.temperatureC) && r.temperatureC >= -50 && r.temperatureC <= 100;
+  out.humValid = r.humValid !== false && finite(r.humidity) && r.humidity >= 0 && r.humidity <= 100;
+  out.etvocValid = r.etvocValid !== false && finite(r.etvoc) && r.etvoc >= 0;
   if (r.co2Valid === undefined) out.co2Valid = out.hasTrueCo2 || out.isPro;
   if (r.hasTrueCo2 === undefined) out.hasTrueCo2 = out.isPro;
+  out.pmValid = r.pmPresent === true && r.pmValid === true &&
+    ['pm1', 'pm25', 'pm4', 'pm10'].filter(k => r[k] !== undefined).every(k => finite(r[k]) && r[k] >= 0) && finite(r.pm25);
+  out.co2Valid = out.co2Valid && finite(r.co2) && r.co2 > 300;
   out.fwVersion = str(r.fwVersion, 20);
   out.ensStatus = str(r.ensStatus, 20);
   out.source = SOURCES.has(r.source) ? r.source : 'physical';
@@ -100,10 +104,22 @@ export function gatewayPrincipal(req, env = process.env) {
   return {kind: 'gateway', email: match.owner.includes('@') ? match.owner : label, label, owner: match.owner || null, token};
 }
 
-export function cubeRouter(store = createCubeStore(), {onLive, onHistory} = {}) {
+export function cubeRouter(initialStore = createCubeStore(), {onLive, onHistory, canPublish} = {}) {
   const router = express.Router();
   router.use((req, res, next) => {
     res.setHeader('Cache-Control', 'private, no-store');
+    next();
+  });
+
+  // The old relay was global. Scope every read and publisher lease to its
+  // authenticated owner; publisher ids and device keys are never credentials.
+  const stores = new Map();
+  router.use((req, res, next) => {
+    if (req.gateway && req.method !== 'POST') return res.status(403).json({error: 'Publish-only credential.'});
+    const owner = req.gateway ? req.gateway.owner || `gateway:${createHash('sha256').update(req.gateway.token).digest('hex')}` : req.session?.email?.toLowerCase();
+    if (!owner) return res.status(401).json({error: 'Sign in required.'});
+    if (!stores.has(owner)) stores.set(owner, stores.size ? createCubeStore() : initialStore);
+    req.cubeStore = stores.get(owner);
     next();
   });
 
@@ -112,6 +128,7 @@ export function cubeRouter(store = createCubeStore(), {onLive, onHistory} = {}) 
   // bearer token instead (see gatewayPrincipal).
   const origins = [process.env.APP_ORIGIN || 'https://noware.so', ...(process.env.ADDITIONAL_AUTH_ORIGINS || '').split(',').map(v => v.trim()).filter(Boolean)];
   function claim(req, res) {
+    const store = req.cubeStore;
     const gateway = req.gateway || null;
     if (!gateway && process.env.NODE_ENV === 'production' && !origins.includes(req.headers.origin)) {
       res.status(403).json({error: 'Request origin not allowed.'});
@@ -120,6 +137,10 @@ export function cubeRouter(store = createCubeStore(), {onLive, onHistory} = {}) 
     const {publisher, sentAt} = req.body || {};
     if (typeof publisher !== 'string' || publisher.length < 8 || publisher.length > 64 || !finite(sentAt)) {
       res.status(400).json({error: 'Invalid publish request.'});
+      return null;
+    }
+    if (canPublish && !canPublish(req.body.meta || store.meta, req.gateway?.owner || req.session?.email)) {
+      res.status(403).json({error: 'Device belongs to another household.'});
       return null;
     }
     const current = store.publisher;
@@ -137,6 +158,7 @@ export function cubeRouter(store = createCubeStore(), {onLive, onHistory} = {}) 
   }
 
   router.post('/live', express.json({limit: '256kb'}), (req, res) => {
+    const store = req.cubeStore;
     const offset = claim(req, res);
     if (offset == null) return;
     const readings = Array.isArray(req.body.readings) ? req.body.readings.slice(-MAX_BATCH) : [];
@@ -158,6 +180,7 @@ export function cubeRouter(store = createCubeStore(), {onLive, onHistory} = {}) 
   });
 
   router.post('/history', express.json({limit: '3mb'}), (req, res) => {
+    const store = req.cubeStore;
     const offset = claim(req, res);
     if (offset == null) return;
     const slots = (Array.isArray(req.body.slots) ? req.body.slots.slice(-MAX_SLOTS) : [])
@@ -172,6 +195,7 @@ export function cubeRouter(store = createCubeStore(), {onLive, onHistory} = {}) 
   });
 
   router.get('/', (req, res) => {
+    const store = req.cubeStore;
     const url = new URL(req.originalUrl, 'https://localhost');
     const liveSince = Number(url.searchParams.get('live_since')) || 0;
     const haveVersion = Number(url.searchParams.get('history_version'));

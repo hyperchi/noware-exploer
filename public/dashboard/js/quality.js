@@ -76,7 +76,7 @@ export function airScore(r) {
 
 export function co2TileStatus(ppm) {
   if (ppm < 800) return "Fresh";
-  if (ppm < 1200) return "Elevated";
+  if (ppm < 1200) return "Moderate";
   if (ppm < 2000) return "High";
   return "Very high";
 }
@@ -84,7 +84,7 @@ export function co2TileStatus(ppm) {
 export function vocTileStatus(ppb) {
   if (ppb <= 220) return "Low";
   if (ppb <= 660) return "Moderate";
-  if (ppb <= 2200) return "Elevated";
+  if (ppb <= 2200) return "Moderate";
   return "High";
 }
 
@@ -110,7 +110,7 @@ export function pm25Quality(ugm3) {
 
 export function pm25TileStatus(ugm3) {
   if (ugm3 <= 9.0) return "Low";
-  if (ugm3 <= 35.4) return "Elevated";
+  if (ugm3 <= 35.4) return "Moderate";
   if (ugm3 <= 55.4) return "High";
   return "Very high";
 }
@@ -149,18 +149,18 @@ export function tileStatus(key, value) {
  * in the metric's display unit; null means unbounded on that side. */
 const ZONES = {
   pm25: [
-    { from: 9, to: 35.4, level: FAIR, label: "Elevated" },
+    { from: 9, to: 35.4, level: FAIR, label: "Moderate" },
     { from: 35.4, to: 55.4, level: POOR, label: "High" },
     { from: 55.4, to: null, level: BAD, label: "Very high" },
   ],
   co2: [
-    { from: 800, to: 1200, level: FAIR, label: "Elevated" },
+    { from: 800, to: 1200, level: FAIR, label: "Moderate" },
     { from: 1200, to: 2000, level: POOR, label: "High" },
     { from: 2000, to: null, level: BAD, label: "Very high" },
   ],
   voc: [
     { from: 220, to: 660, level: FAIR, label: "Moderate" },
-    { from: 660, to: 2200, level: POOR, label: "Elevated" },
+    { from: 660, to: 2200, level: POOR, label: "Moderate" },
     { from: 2200, to: null, level: BAD, label: "High" },
   ],
   hum: [
@@ -250,7 +250,7 @@ export function liveMetricValue(metricKey, reading) {
     case "pm25":
       return reading.pmValid ? reading.pm25 : NaN;
     case "co2":
-      return (reading.hasTrueCo2 ?? reading.isPro) ? reading.co2 : reading.eco2;
+      return (reading.hasTrueCo2 && reading.co2Valid === false) || reading.pmPresent && !reading.hasTrueCo2 ? NaN : (reading.hasTrueCo2 ?? reading.isPro) ? reading.co2 : reading.eco2;
     case "voc":
       return reading.etvoc;
     case "temp":

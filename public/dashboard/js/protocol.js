@@ -58,7 +58,7 @@ const num = (v) => {
  * Since firmware 1.5.0 `ens16x.aqi` is the VOC Level index (0-500), which is a
  * different number from `ens16x.etvoc` in ppb despite the similar names.
  * Pro units add scd41.co2 and vcnl4040.lux. Boards with the Sensirion SEN63C
- * fitted add a `sen63c` object with PM1/PM2.5/PM4/PM10 and a true (NDIR) CO2
+ * fitted add a `sen63c` object with PM1/PM2.5/PM4/PM10 and a direct CO2
  * reading of their own; on those boards temperature and humidity also come
  * from the SEN63C, still under the legacy `ens210` keys. Older firmware omits
  * `model`, and firmware before 2.0.3 omits `fw`.
@@ -78,11 +78,12 @@ export function parseLive(data, { timestamp } = {}) {
   const sen63c = data.sen63c || {};
   const health = data.health || {};
   const model = data.model;
-  const senCo2Valid = Boolean(sen63c.co2_valid);
+  const senCo2Valid = sen63c.present === true && sen63c.co2_valid === true &&
+    typeof sen63c.co2 === "number" && Number.isFinite(sen63c.co2) && sen63c.co2 > 0;
   const co2 = Math.round(num(senCo2Valid ? sen63c.co2 : scd41.co2));
   const isPro = model !== undefined ? model === "pro" : num(scd41.co2) > 0;
   const hasTrueCo2 = senCo2Valid || isPro || (model === undefined && co2 > 0);
-  const etvocRaw = Number(ens16x.etvoc);
+  const etvocRaw = typeof ens16x.etvoc === "number" ? ens16x.etvoc : NaN;
   const ensStatus = typeof ens16x.status === "string" ? ens16x.status : "";
   // "OK" is the only status under which the ENS161 vouches for its gas output;
   // "Warming Up" covers the 3-minute warm-up and the 1-hour first-run
@@ -102,8 +103,9 @@ export function parseLive(data, { timestamp } = {}) {
     co2,
     lux: num(vcnl.lux),
     aqiUba: Math.round(num(ens16x.aqi_uba)),
-    pmPresent: Boolean(sen63c.present),
-    pmValid: Boolean(sen63c.valid),
+    pmPresent: sen63c.present === true,
+    pmValid: sen63c.present === true && sen63c.valid === true &&
+      [sen63c.pm1_0, sen63c.pm2_5, sen63c.pm4_0, sen63c.pm10_0].every(v => typeof v === "number" && Number.isFinite(v) && v >= 0),
     pm1: num(sen63c.pm1_0),
     pm25: num(sen63c.pm2_5),
     pm4: num(sen63c.pm4_0),
@@ -113,8 +115,8 @@ export function parseLive(data, { timestamp } = {}) {
     hasLux: isPro,
     ensStatus,
     warmingUp: ensStatus === "Warming Up",
-    tempValid: health.temp_valid !== undefined ? Boolean(health.temp_valid) : num(ens210.status) !== 0,
-    humValid: health.hum_valid !== undefined ? Boolean(health.hum_valid) : num(ens210.status) !== 0,
+    tempValid: Number.isFinite(ens210.temperature_c) && (health.temp_valid !== undefined ? health.temp_valid === true : ens210.status !== 0),
+    humValid: Number.isFinite(ens210.humidity) && (health.hum_valid !== undefined ? health.hum_valid === true : ens210.status !== 0),
     co2Valid: hasTrueCo2 && (health.co2_valid !== undefined ? Boolean(health.co2_valid) : co2 > 0),
     etvocValid,
     sensorMissing: Boolean(health.sensor_missing),

@@ -108,7 +108,7 @@ export class Publisher {
   async pushHistory(slots, windowS) {
     if (!slots?.length) return false;
     try {
-      const res = await this._post("/history", { slots, windowS });
+      const res = await this._post("/history", { slots, windowS, meta: this.meta() });
       if (res.ok) {
         this.needHistory = false;
         this.log?.info("history published", { slots: res.data.slots });
