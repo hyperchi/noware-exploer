@@ -2,11 +2,11 @@ import express from 'express';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import auth from './api/auth.js';
-import {cubeRouter} from './api/cube.js';
+import {cubeRouter,gatewayPrincipal} from './api/cube.js';
 import {readSession,getCookie,SESSION_COOKIE} from './lib/session.js';
 import {ALLOWED_DOMAIN} from './lib/auth-policy.js';
 
-export function createApp({cubeStore}={}){
+export function createApp({cubeStore,onLive,onHistory}={}){
  const app=express();
  const dist=fileURLToPath(new URL('./dist/',import.meta.url));
  app.disable('x-powered-by');
@@ -30,13 +30,17 @@ export function createApp({cubeStore}={}){
  app.get('/login', (req,res)=>res.sendFile(path.join(dist,'login.html')));
  app.get('/login.html', (req,res)=>res.redirect(308,'/login'));
  for(const file of ['login.js','favicon.ico'])app.get('/'+file,(req,res)=>res.sendFile(path.join(dist,file)));
+ // Headless publishers (gateway/) authenticate with a bearer token from
+ // GATEWAY_TOKENS; they may only reach the cube relay, never pages or files.
+ app.use('/api/cube',(req,res,next)=>{const gateway=gatewayPrincipal(req);if(gateway){req.gateway=gateway;req.session={email:gateway.email,gateway:true};}next()});
  app.use(async(req,res,next)=>{
+  if(req.gateway)return next();
   const session=await readSession(getCookie(req.headers.cookie,SESSION_COOKIE),{secret:process.env.SESSION_SECRET,domain:ALLOWED_DOMAIN});
-  if(!session)return res.redirect(303,'/login');
+  if(!session){if(req.path.startsWith('/api/'))return res.status(401).json({error:'Sign in required.'});return res.redirect(303,'/login');}
   req.session=session;
   next();
  });
- app.use('/api/cube',cubeRouter(cubeStore));
+ app.use('/api/cube',cubeRouter(cubeStore,{onLive,onHistory}));
  app.use(express.static(dist,{dotfiles:'deny',etag:false,lastModified:false,setHeaders:res=>res.setHeader('Cache-Control','private, no-store')}));
  app.use((req,res)=>res.status(404).send('Not found'));
  app.use((err,req,res,next)=>{res.status(err.status===413?413:400).json({error:'Request could not be processed.'})});
