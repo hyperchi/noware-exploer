@@ -43,7 +43,7 @@ export async function main(env = process.env) {
     fwVersion: session?.fwVersion || "",
     ledPercent: session?.ledPercent ?? null,
     source: "physical",
-    deviceKey: config.deviceKey,
+    deviceKey: config.deviceKey || `usb:${serialNumber || state.publisherId}`,
     roomId: "",
     roomName: config.roomName,
   });
@@ -80,7 +80,7 @@ export async function main(env = process.env) {
         }
       : { enabled: false },
     capture: { dir: config.captureDir, written: capture.written, lastError: capture.lastError },
-    deviceKey: config.deviceKey,
+    deviceKey: config.deviceKey || `usb:${serialNumber || state.publisherId}`,
     roomName: config.roomName,
   });
   const health = startHealthServer(config.healthPort, snapshot, { log });

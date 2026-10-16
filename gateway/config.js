@@ -56,7 +56,7 @@ export function loadConfig(env = process.env, { envFile = DEFAULT_ENV_FILE, home
     token,
     publishEnabled: token.length >= 32,
     label: (get("GATEWAY_LABEL") || hostname || "gateway").slice(0, 60),
-    deviceKey: (get("AIRCUBE_DEVICE_KEY") || "aircube-1").slice(0, 64),
+    deviceKey: (get("AIRCUBE_DEVICE_KEY") || "").slice(0, 64),
     roomName: (get("AIRCUBE_ROOM") || "").slice(0, 60),
     portPath: get("AIRCUBE_PORT") || "",
     healthPort: intOr(get("GATEWAY_HEALTH_PORT"), 8787, { min: 1, max: 65535 }),
