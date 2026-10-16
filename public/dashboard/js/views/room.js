@@ -33,8 +33,8 @@ const RANGES = [
   { label: "Today", seconds: 86400 },
   { label: "7 days", seconds: 7 * 86400 },
 ];
-const FRIENDLY = { pm25: "Fine particles", tvoc: "Chemicals & odors", co2: "Fresh air", eco2: "Fresh air (est.)", hum: "Humidity", temp: "Temperature", pm10: "Coarse particles", pm1: "Ultrafine", lux: "Light" };
-const TECH = { pm25: "PM2.5 µg/m³", tvoc: "TVOC ppb", co2: "CO2 ppm", eco2: "eCO2 ppm", hum: "RH %", temp: "°C", pm10: "PM10 µg/m³", pm1: "PM1 µg/m³", lux: "lux" };
+const FRIENDLY = { pm25: "Fine particles", tvoc: "Chemicals & odors", co2: "Fresh air", eco2: "Fresh air (est.)", hum: "Humidity", temp: "Temperature", pm10: "Coarse particles", pm1: "Small particles", lux: "Light" };
+const TECH = { pm25: "PM2.5 µg/m³", tvoc: "eTVOC ppb", co2: "CO2 ppm", eco2: "eCO2 ppm", hum: "RH %", temp: "°C", pm10: "PM10 µg/m³", pm1: "PM1 µg/m³", lux: "lux" };
 const CATEGORY_COLOR = { particles: "--m-pm", voc: "--m-voc", ventilation: "--m-co2", humidity: "--m-hum", temperature: "--m-temp" };
 
 export class RoomView {
