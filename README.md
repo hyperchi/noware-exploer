@@ -124,3 +124,11 @@ Environmental guidance only, never medical advice. Simulated data is always labe
 Push to `main` to validate and deploy automatically to https://noware.so on GCP. You can also use [Actions → Deploy noware to GCP](https://github.com/hyperchi/noware-exploer/actions/workflows/deploy-gcp.yml) and select **Run workflow** on `main`. Pull requests run checks without production access. Keyless GCP authentication and repository deployment variables are configured; the runtime login secret stays in Secret Manager. See `infrastructure/README.md` for permissions and deployment details.
 
 Run `node scripts/library-models-check.mjs` to load all 46 entries and check model bounds/camera controls. Additional STEP assets use `node scripts/convert-step.mjs <model-name> <source.step>`; reconstructions use `node scripts/prepare-datasheet-models.mjs`. Sources and material treatments are recorded in `public/models/README.md`.
+
+### Simple view: AQI, source patterns and settings
+
+Open `/dashboard/#/simple` for the companion view; the original dashboard remains at `/dashboard/`. Choose your city/postal code under **Set your location** for regional outdoor PM2.5. Indoor and outdoor AQI use the same **2024 US EPA PM2.5 NowCast** calculation. The outdoor estimate comes from Open-Meteo / CAMS, and is not a measurement directly outside your home. Commercial production use requires a configured `OPEN_METEO_API_KEY`; local development can use the public endpoint.
+
+**Chemicals & odors → What causes this?** opens the common-source guide and your room's recorded event patterns, durations, recovery and activity-note matches. Sources are hypotheses, not chemical identification. Settings now group optional home, people/pets, equipment and provider choices, with firmware/calibration under Advanced.
+
+For a local physical-device session, set `NOWARE_DEMO=0` and follow [the gateway guide](docs/MAC_MINI_AIRCUBE_GATEWAY.md). Keep the feature branch local for review; do not deploy until explicitly approved.

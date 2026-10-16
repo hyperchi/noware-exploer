@@ -1,100 +1,129 @@
-/* Household context settings: concerns, sensitivities, pets, rooms,
- * equipment, contractor relationship and data sharing. Optional; defaults
- * are reasonable without any of it.
- */
+/* Everyday choices first. Each group is an explicit, optional edit. */
+import { h, toast, confirmDialog, fill, openModal } from '../ui.js';
+import { homeApi } from '../home-api.js';
+import { openLocationPicker } from '../aqi-ui.js';
 
-import { h, toggle, toast, confirmDialog, fill } from "../ui.js";
-import { homeApi } from "../home-api.js";
+const CONCERNS = [['pollen', 'Pollen'], ['dust', 'Dust'], ['petAllergens', 'Pet allergens'], ['smoke', 'Smoke'], ['cooking', 'Cooking'], ['mold', 'Humidity'], ['odors', 'Odors']];
+const SENSITIVITIES = [['allergies', 'Allergies'], ['asthma', 'Asthma'], ['youngChildren', 'Young children'], ['elderlyResidents', 'Older adults']];
+const PETS = [['cat', 'Cat'], ['dog', 'Dog'], ['other', 'Other pets'], ['unspecified', 'Prefer not to specify']];
+const EQUIPMENT = [['hvac', 'Central heating & cooling'], ['hvac_filter', 'HVAC filter'], ['whole_home_air_cleaner', 'Whole-home air cleaner'], ['portable_purifier', 'Portable purifier'], ['humidifier', 'Humidifier'], ['dehumidifier', 'Dehumidifier'], ['fresh_air_ventilator', 'ERV / HRV'], ['kitchen_exhaust', 'Kitchen exhaust'], ['bathroom_exhaust', 'Bathroom fan'], ['thermostat', 'Thermostat'], ['operable_windows', 'Windows that open']];
+const ROOM_TYPES = ['living', 'bedroom', 'kitchen', 'nursery', 'bathroom', 'office', 'basement', 'other'];
 
-const CONCERNS = [["pollen", "Pollen"], ["dust", "Dust"], ["petAllergens", "Pet allergens"], ["smoke", "Smoke / wildfire"], ["cooking", "Cooking pollution"], ["mold", "Humidity / mould"], ["odors", "Odors"]];
-const SENSITIVITIES = [["allergies", "Allergies"], ["asthma", "Asthma / respiratory sensitivity"], ["youngChildren", "Young children"], ["elderlyResidents", "Older residents"]];
-const PETS = [["cat", "Cat"], ["dog", "Dog"], ["other", "Other"]];
-const EQUIPMENT = [["hvac", "Central HVAC"], ["hvac_filter", "HVAC filter"], ["whole_home_air_cleaner", "Whole-home air cleaner"], ["portable_purifier", "Portable purifier"], ["humidifier", "Humidifier"], ["dehumidifier", "Dehumidifier"], ["fresh_air_ventilator", "Fresh-air ventilator (ERV/HRV)"], ["kitchen_exhaust", "Kitchen exhaust"], ["bathroom_exhaust", "Bathroom exhaust"], ["thermostat", "Smart thermostat"], ["operable_windows", "Operable windows"]];
-const ROOM_TYPES = ["living", "bedroom", "kitchen", "nursery", "bathroom", "office", "basement", "other"];
-
-function row(label, control, sub) {
-  return h("div.settings-row", h("div.label", h("div", { text: label }), sub ? h("span.sub", { text: sub }) : null), control);
+export function settingsFold(key, title, subtitle, ...children) {
+  return h('details.settings-fold', { 'data-key': key },
+    h('summary', h('div', h('strong', { text: title }), h('span', { text: subtitle })), h('span.settings-chevron', { 'aria-hidden': 'true', text: '+' })),
+    h('div.settings-fold-body', ...children));
+}
+const field = (title, input, help) => h('label.settings-field', h('span', { text: title }), input, help ? h('small', { text: help }) : null);
+function choices(items, current) {
+  const nodes = items.map(([key, label]) => [key, h('input', { type: 'checkbox', checked: Boolean(current?.[key]) }), label]);
+  return { el: h('div.settings-choices', ...nodes.map(([, input, label]) => h('label', input, label))), value: () => Object.fromEntries(nodes.map(([key, input]) => [key, input.checked])) };
+}
+function saveForm(children, submit, label = 'Save changes') {
+  const status = h('span.settings-save-status', { role: 'status' });
+  const button = h('button.simple-button.primary', { type: 'submit', text: label });
+  return h('form.settings-form', { onsubmit: async e => {
+    e.preventDefault(); button.disabled = true; status.textContent = 'Saving…';
+    try { await submit(); status.textContent = 'Saved'; }
+    catch (err) { status.textContent = err.message; }
+    finally { button.disabled = false; }
+  } }, ...children, h('div.settings-save', button, status));
 }
 
 export function householdSection(feed) {
-  const host = h("div");
-  let signature = "";
-
+  const host = h('div.settings-home');
+  let signature = '';
+  const expanded = new Set();
   function render() {
     const hh = feed.household;
-    if (feed.available === false) {
-      fill(host, h("h2.section-label", { text: "Your home" }), h("div.card.settings-group", row("Not available", h("span.faint", { text: "Local mode" }), "Sign in to noware.so to set up rooms, context and your contractor.")), h("div", { style: { height: "14px" } }));
-      return;
-    }
-    if (!hh) return;
-    const sig = JSON.stringify([hh.household.id, hh.household.profile, hh.household.rooms.map((r) => [r.id, r.name, r.type]), hh.household.equipment, hh.contractor?.shareInsights]);
+    if (feed.available === false) { fill(host, h('p.settings-hint', { text: 'Home preferences are available when connected to your account.' })); return; }
+    if (!hh) { fill(host, h('p.settings-hint', { text: 'Your home will appear when your AirCube connects.' })); return; }
+    const home = hh.household, profile = home.profile || {};
+    const sig = JSON.stringify([home.id, home.name, home.timeZone, profile, home.rooms, home.equipment, home.location, hh.contractor]);
     if (sig === signature) return;
+    host.querySelectorAll('details[data-key]').forEach(d => d.open ? expanded.add(d.dataset.key) : expanded.delete(d.dataset.key));
     signature = sig;
-    const home = hh.household;
-    const profile = home.profile || {};
-    const save = async (patch, msg = "Saved") => {
-      try {
-        await homeApi.updateHousehold(home.id, patch);
-        await feed.reloadHousehold();
-        toast(msg);
-      } catch (err) {
-        toast(err.message, "err");
-      }
+    const save = async patch => { await homeApi.updateHousehold(home.id, patch); await feed.reloadHousehold(); toast('Changes saved'); };
+    const name = h('input', { value: home.name, required: true, maxlength: '60' });
+    const roomList = h('div.settings-rooms', ...home.rooms.map(room => {
+      const name = h('input', { value: room.name, required: true, maxlength: '60', 'aria-label': `Room name: ${room.name}` });
+      const type = h('select', { 'aria-label': `Room type: ${room.name}` }, ...ROOM_TYPES.map(t => h('option', { value: t, selected: t === room.type, text: t[0].toUpperCase() + t.slice(1) })));
+      return h('div.settings-room', name, type, h('button.simple-link', { type: 'button', text: 'Save', 'aria-label': `Save ${room.name}`, onclick: async () => {
+        if (!name.reportValidity()) return;
+        try { await save({ rooms: home.rooms.map(r => r.id === room.id ? { ...r, name: name.value.trim(), type: type.value } : r) }); } catch (e) { toast(e.message, 'err'); }
+      } }), h('button.simple-link.settings-remove', { type: 'button', text: 'Remove', 'aria-label': `Remove ${room.name}`, onclick: async () => {
+        if (await confirmDialog('Remove room', `Remove ${room.name}? Its device will be detached.`, 'Remove')) {
+          try { await save({ rooms: home.rooms.filter(r => r.id !== room.id) }); } catch (e) { toast(e.message, 'err'); }
+        }
+      } }));
+    }));
+    const addRoom = () => {
+      const { body, close, backdrop } = openModal('Add a room'); backdrop.classList.add('simple-note-modal');
+      const modal = backdrop.querySelector('.modal');
+      modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-label', 'Add a room');
+      const input = h('input', { required: true, maxlength: '60', placeholder: 'For example, Bedroom' });
+      const type = h('select', ...ROOM_TYPES.map(t => h('option', { value: t, text: t[0].toUpperCase() + t.slice(1), selected: t === 'other' })));
+      body.append(saveForm([field('Room name', input), field('Room type', type)], async () => {
+        await save({ rooms: [...home.rooms, { id: `room-${Date.now()}`, name: input.value.trim(), type: type.value }] }); close();
+      }, 'Add room'), h('button.simple-button', { type: 'button', text: 'Cancel', onclick: close })); input.focus();
+      modal.addEventListener('keydown', e => {
+        if (e.key !== 'Tab') return;
+        const nodes = [...modal.querySelectorAll('input,select,button:not(:disabled)')];
+        if (e.shiftKey && document.activeElement === nodes[0]) { e.preventDefault(); nodes.at(-1).focus(); }
+        else if (!e.shiftKey && document.activeElement === nodes.at(-1)) { e.preventDefault(); nodes[0].focus(); }
+      });
     };
-    const checks = (items, current, onChange) => h("div.check-list", ...items.map(([key, label]) => h("label", h("input", { type: "checkbox", checked: Boolean(current?.[key]), onchange: (e) => onChange(key, e.target.checked) }), label)));
-
-    const nameInput = h("input", { type: "text", value: home.name, onchange: (e) => save({ name: e.target.value }) });
-    const concerns = checks(CONCERNS, profile.concerns, (k, v) => save({ profile: { concerns: { [k]: v } } }, "Context updated"));
-    const sens = checks(SENSITIVITIES, profile.sensitivities, (k, v) => save({ profile: { sensitivities: { [k]: v } } }, "Context updated"));
-    const petTypes = new Set(profile.pets?.types || []);
-    const pets = h("div.check-list", h("label", h("input", { type: "checkbox", checked: Boolean(profile.pets?.hasPets), onchange: (e) => save({ profile: { pets: { hasPets: e.target.checked, types: [...petTypes] } } }, "Context updated") }), "We have pets"), ...PETS.map(([key, label]) => h("label", h("input", { type: "checkbox", checked: petTypes.has(key), onchange: (e) => { if (e.target.checked) petTypes.add(key); else petTypes.delete(key); save({ profile: { pets: { hasPets: petTypes.size > 0 || Boolean(profile.pets?.hasPets), types: [...petTypes] } } }, "Context updated"); } }), label)));
-
-    const roomsList = h("div.card-stack", ...home.rooms.map((r) => h("div.row.wrap",
-      h("input", { type: "text", value: r.name, style: { width: "160px" }, onchange: (e) => save({ rooms: home.rooms.map((x) => (x.id === r.id ? { ...x, name: e.target.value } : x)) }) }),
-      h("select", { onchange: (e) => save({ rooms: home.rooms.map((x) => (x.id === r.id ? { ...x, type: e.target.value } : x)) }) }, ...ROOM_TYPES.map((t) => h("option", { value: t, selected: t === r.type, text: t }))),
-      h("span.faint.tiny", { text: r.devices?.length ? `${r.devices.length} device${r.devices.length > 1 ? "s" : ""}${r.devices.some((d) => d.simulation) ? " (simulated)" : ""}` : "no device" }),
-      h("button.linkbtn.tiny", { type: "button", text: "Remove", onclick: async () => { if (await confirmDialog("Remove room", `Remove ${r.name}? Its device (if any) will be detached.`, "Remove")) save({ rooms: home.rooms.filter((x) => x.id !== r.id) }); } }),
-    )), h("button.btn", { type: "button", text: "Add room", onclick: () => { const name = window.prompt("Room name", "Bedroom"); if (name) save({ rooms: [...home.rooms, { id: `room-${Date.now()}`, name, type: guess(name) }] }); } }));
-
-    const equipmentSet = new Map((home.equipment || []).map((e) => [e.type, e]));
-    const equipment = h("div.check-list", ...EQUIPMENT.map(([key, label]) => h("label", h("input", { type: "checkbox", checked: equipmentSet.has(key), onchange: (e) => { const next = home.equipment.filter((x) => x.type !== key); if (e.target.checked) next.push({ id: `eq-${key}`, type: key, label }); save({ equipment: next }, "Equipment updated"); } }), label)));
-
+    const concerns = choices(CONCERNS, profile.concerns), sens = choices(SENSITIVITIES, profile.sensitivities);
+    const petTypes = new Set(profile.pets?.hasPets ? profile.pets.types || [] : []);
+    if (profile.pets?.hasPets && !petTypes.size) petTypes.add('unspecified');
+    const pets = choices(PETS, Object.fromEntries([...petTypes].map(t => [t, true])));
+    const installed = choices(EQUIPMENT, Object.fromEntries((home.equipment || []).map(e => [e.type, true])));
     const contractor = hh.contractor;
-    const providerSelect = h('select', { 'aria-label': 'Choose service provider' }, h('option', { value: '', text: 'Choose your provider…' }));
-    homeApi.providers().then(providers => { for (const p of providers) providerSelect.append(h('option', { value: p.id, text: p.name })); }).catch(() => {});
-    const connectProvider = h('div.row.wrap', providerSelect, h('button.btn', { text: 'Connect provider', onclick: async () => { if (!providerSelect.value) return; try { await homeApi.connectProvider(home.id, providerSelect.value, false); await feed.reloadHousehold(); toast('Provider connected. Enable sharing when you are ready.'); } catch (e) { toast(e.message, 'err'); } } }));
-    const contractorRows = contractor
-      ? [row(contractor.name, toggle(contractor.shareInsights, (on) => save({ shareInsights: on }, on ? "Sharing air insights" : "Sharing paused")), `Share air insights with ${contractor.name}. When off, they cannot see this home at all.`),
-        row("What is shared", h("span.faint.tiny", { text: "Status, recurring patterns, measurements, equipment and the context above. Never raw second-by-second data." }))]
-      : [row("No service provider connected", h("span.faint", { text: "—" }), "Connecting one lets you ask for help with your air data attached. Nothing is invented until then.")];
-
-    fill(host, 
-      h("h2.section-label", { text: `Your home${home.demo ? " · demo" : ""}` }),
-      h("div.card.settings-group", row("Home name", nameInput), row("Time zone", h("span.faint", { text: home.timeZone || "browser default" }), "Used for time-of-day baselines and overnight patterns.")),
-      h("div", { style: { height: "14px" } }),
-      h("h2.section-label", { text: "What matters in this home" }),
-      h("div.card.settings-group", row("Concerns", concerns, "Personalizes wording and which possibilities are listed. Never turns the sensor into an allergen detector."), row("Sensitivities", sens), row("Pets", pets)),
-      h("div", { style: { height: "14px" } }),
-      h("h2.section-label", { text: "Rooms" }),
-      h("div.card.settings-group", row("Rooms", roomsList, "A cube is attached to a room by the name it publishes with, or the first room.")),
-      h("div", { style: { height: "14px" } }),
-      h("h2.section-label", { text: "Equipment" }),
-      h("div.card.settings-group", row("Installed", equipment, "Used to tailor actions (e.g. run your purifier) and contractor insights.")),
-      h("div", { style: { height: "14px" } }),
-      h("h2.section-label", { text: "Service provider" }),
-      h("div.card.settings-group", ...contractorRows, row("Choose or change provider", connectProvider, "Connecting a provider starts with sharing off. You control access.")),
-      h("div", { style: { height: "14px" } }),
+    const provider = h('select', { 'aria-label': 'Choose service provider' }, h('option', { value: '', text: 'Loading providers…' }));
+    const providerButton = h('button.simple-button', { type: 'button', text: contractor ? 'Change provider' : 'Connect provider', disabled: true, onclick: async () => {
+      if (!provider.value) return;
+      providerButton.disabled = true;
+      try { await homeApi.connectProvider(home.id, provider.value, false); await feed.reloadHousehold(); toast('Provider connected. Sharing is off.'); }
+      catch (e) { toast(e.message, 'err'); }
+      finally { providerButton.disabled = !provider.value; }
+    } });
+    const providerMessage = h('p.settings-hint');
+    provider.addEventListener('change', () => { providerButton.disabled = !provider.value; });
+    homeApi.providers().then(list => {
+      fill(provider, h('option', { value: '', text: list.length ? 'Choose a provider' : 'No providers available yet' }), ...list.map(p => h('option', { value: p.id, text: p.name })));
+      providerMessage.textContent = list.length ? 'Connecting starts with sharing off.' : 'A registered provider will appear here when available.';
+    }).catch(() => { fill(provider, h('option', { text: 'Providers unavailable' })); providerMessage.textContent = 'Could not load providers. Try again later.'; });
+    const share = contractor ? h('input', { type: 'checkbox', checked: contractor.shareInsights, onchange: async e => {
+      const requested = e.target.checked; e.target.disabled = true;
+      try { await save({ shareInsights: requested }); } catch (err) { e.target.checked = !requested; toast(err.message, 'err'); }
+      finally { e.target.disabled = false; }
+    } }) : null;
+    const context = [...SENSITIVITIES.filter(([k]) => profile.sensitivities?.[k]).map(([, v]) => v), ...PETS.filter(([k]) => profile.pets?.hasPets && petTypes.has(k)).map(([k, v]) => k === 'unspecified' ? 'Pets' : v)];
+    fill(host,
+      h('div.settings-area-row', h('div', h('strong', { text: 'Outdoor air' }), h('p', { text: home.location?.label || 'Add your area to compare inside and outside.' })), h('button.simple-button', { type: 'button', text: home.location ? 'Change area' : 'Choose area', onclick: () => openLocationPicker(feed) })),
+      settingsFold('home', 'Home & rooms', `${home.name} · ${home.rooms.length} ${home.rooms.length === 1 ? 'room' : 'rooms'}`,
+        saveForm([field('Home name', name)], () => save({ name: name.value.trim() })),
+        h('h3', { text: 'Rooms' }), roomList, h('button.simple-button', { type: 'button', text: 'Add room', onclick: addRoom })),
+      settingsFold('comfort', 'Make it personal', context.length ? context.join(' · ') : 'Allergies, pets and what matters to you. Optional.',
+        saveForm([
+          h('p.settings-hint', { text: 'Choose what applies. This helps tailor advice; it does not identify allergens.' }),
+          h('fieldset', h('legend', { text: 'People in your home' }), sens.el),
+          h('fieldset', h('legend', { text: 'Pets' }), pets.el),
+          h('fieldset', h('legend', { text: 'What would you like help with?' }), concerns.el),
+        ], () => { const selected = Object.entries(pets.value()).filter(([, v]) => v).map(([k]) => k); return save({ profile: { concerns: concerns.value(), sensitivities: sens.value(), pets: { hasPets: selected.length > 0, types: selected.filter(k => k !== 'unspecified') } } }); })),
+      settingsFold('equipment', 'Air & comfort equipment', home.equipment?.length ? `${home.equipment.length} ${home.equipment.length === 1 ? 'item' : 'items'} added` : 'Purifier, heating, cooling and fans. Optional.',
+        saveForm([h('p.settings-hint', { text: 'Select what you have so recommendations fit your home.' }), installed.el], () => {
+          const values = installed.value();
+          const next = (home.equipment || []).filter(e => !(e.type in values) || values[e.type]);
+          for (const [type, label] of EQUIPMENT) if (values[type] && !next.some(e => e.type === type)) next.push({ id: `eq-${type}`, type, label });
+          return save({ equipment: next });
+        })),
+      settingsFold('provider', 'Your service provider', contractor ? `${contractor.name} · Sharing ${contractor.shareInsights ? 'on' : 'off'}` : 'Connect someone you trust when you need help.',
+        contractor ? h('div.settings-sharing', h('label', share, ` Share air insights with ${contractor.name}`), h('p.settings-hint', { text: 'Includes readings, event patterns, activity notes, household context and equipment. Turn off to remove their access to this home.' })) : null,
+        h('div.settings-provider-picker', provider, providerButton), providerMessage),
     );
+    host.querySelectorAll('details[data-key]').forEach(d => { d.open = expanded.has(d.dataset.key); });
   }
-
-  feed.addEventListener("change", render);
-  render();
+  feed.addEventListener('change', render); render();
   return host;
-}
-
-function guess(name) {
-  const n = name.toLowerCase();
-  for (const t of ROOM_TYPES) if (n.includes(t === "living" ? "living" : t)) return t;
-  if (/bed/.test(n)) return "bedroom";
-  return "other";
 }

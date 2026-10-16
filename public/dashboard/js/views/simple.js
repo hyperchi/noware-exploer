@@ -1,6 +1,7 @@
 /* A plain-language view alongside the original dashboard. All conclusions
  * come from the shared summary; this view only selects and presents them. */
 import { h, fill, toast, openModal } from '../ui.js';
+import { aqiPanel, openLocationPicker } from '../aqi-ui.js';
 import { homeApi } from '../home-api.js';
 import { agoText, clockText, recommendationCard, contractorCard, timelineList, evidenceList, openContactModal } from '../air-ui.js';
 import { OBSERVATION_TYPES } from '../intelligence/source-patterns.js';
@@ -16,10 +17,10 @@ export class SimpleView {
     this.body = h('div.simple-body');
     this.expanded = new Set();
     this.el = h('main.simple-air',
-      h('header.simple-header', h('a.simple-brand', { href: '#/', text: 'noware', 'aria-label': 'Noware original dashboard' }),
+      h('header.simple-header', h('a.simple-brand', { href: '#/', text: 'Noware', 'aria-label': 'Noware original dashboard' }),
         h('span.simple-wordmark', { text: 'AIR, UNDERSTOOD.' }), h('div.spacer'),
-        h('nav.simple-switch', { 'aria-label': 'Dashboard view' }, h('a.selected', { href: '#/simple', text: 'Simple view', 'aria-current': 'page' }), h('a', { href: '#/', text: 'Original view' }))),
-      h('div.simple-topline', h('div', h('div.simple-kicker', { text: 'YOUR EVERYDAY AIR' }), h('p', { text: 'A little clarity. A more comfortable home.' })), this.headerRooms),
+        h('nav.simple-switch', { 'aria-label': 'Dashboard view' }, h('a.selected', { href: '#/simple', text: 'Simple view', 'aria-current': 'page' }), h('a', { href: '#/', text: 'Original view' })), h('a.simple-settings-link', { href: '#/settings', text: 'Settings', 'aria-label': 'Settings' })),
+      h('div.simple-topline', h('div', h('div.simple-kicker', { text: 'YOUR EVERYDAY AIR' }), h('p', { text: 'See what changed. Know what to do.' })), this.headerRooms),
       this.body,
       h('footer.simple-footer', h('span', { text: 'AirCube · Real readings. Thoughtful guidance.' }), h('a', { href: '#/intelligence', text: 'All rooms & air insights →' })),
     );
@@ -67,12 +68,13 @@ export class SimpleView {
     const mainChannels = ['pm25', room.capabilities.trueCo2 ? 'co2' : 'eco2', 'tvoc', 'hum'];
     const metrics = h('section.simple-section', this.sectionHead('The numbers, made simple', 'What your AirCube is seeing.', h('a.simple-link', { href: roomHref, text: 'All measurements →' })),
       h('div.simple-metrics', ...mainChannels.map(c => room.measurements.find(m => m.channel === c)).filter(Boolean).map(m => this.metric(m, online, warm))));
-    const cause = issue ? h('section.simple-cause', h('div.simple-kicker', { text: 'WHAT MAY HAVE CHANGED' }), h('h2', { text: issue.source && issue.source !== 'unknown' ? `Possibly ${issue.sourceLabel || 'a change in this room'}` : 'A few different causes could fit.' }),
+    const cause = issue && issue.category !== 'voc' ? h('section.simple-cause', h('div.simple-kicker', { text: 'WHAT MAY HAVE CHANGED' }), h('h2', { text: issue.source && issue.source !== 'unknown' ? `Possibly ${issue.sourceLabel || 'a change in this room'}` : 'A few different causes could fit.' }),
       h('p', { text: issue.source !== 'unknown' ? `${issue.confidence ? issue.confidence[0].toUpperCase() + issue.confidence.slice(1) : 'Low'} confidence · This is an interpretation of the pattern, not a directly measured source.` : 'The reading is real. The cause is still uncertain. A note about what was happening may help.' }),
       this.disclosure('cause', 'See the evidence', evidenceList(issue.evidence)),
     ) : null;
     const patterns = room.sourcePatterns;
-    const clues = h('section.simple-section', this.sectionHead('What might be behind it?', 'Clues from your air, plus what you notice at home.', h('button.simple-button', { type: 'button', text: '+ Add an activity note', 'data-focus': 'add-note', onclick: () => this.addNote(room) })),
+    const clues = h('section.simple-section', this.sectionHead('Understand the patterns', 'Your measurements. A little context. A clearer picture.', h('button.simple-button', { type: 'button', text: '+ Add an activity note', 'data-focus': 'add-note', onclick: () => this.addNote(room) })),
+      this.chemicalPanel(room),
       h('div.simple-patterns', ...(patterns?.cards || []).map(p => this.pattern(p))),
       patterns?.associations.length ? h('div.simple-associations', ...patterns.associations.map(a => h('div', h('strong', { text: `${a.label} · ${a.recurring ? 'Repeated timing match' : 'Still learning'}` }), h('p', { text: a.text })))) : null,
       patterns?.recentObservations.length ? this.disclosure('notes', 'Your activity notes', h('ul.simple-notes', ...patterns.recentObservations.map(o => h('li', h('div', h('strong', { text: o.label }), h('span', { text: `You recorded · ${new Date(o.occurredAt * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${clockText(o.occurredAt)}` }), o.note ? h('p', { text: o.note }) : null), h('button.simple-link', { type: 'button', text: 'Remove', 'aria-label': `Remove ${o.label} note`, 'data-focus': `remove-${o.id}`, onclick: async () => { try { await homeApi.removeObservation(f.householdId, o.id); await f.refresh(); } catch (e) { toast(e.message, 'err'); } } }))))) : null,
@@ -80,7 +82,7 @@ export class SimpleView {
     const story = h('section.simple-section', this.sectionHead('Your air, over the day', 'Changes and actions from the last 24 hours.'), timelineList(room.timeline?.slice(-6), { empty: online ? 'No air events recorded in the last 24 hours.' : 'No recent air events recorded. Live readings are unavailable.' }));
     const provider = f.household?.contractor;
     const help = provider ? contractorCard(provider, { onContact: type => this.contact(room, type), onReport: () => this.contact(room, 'share_air_report') }) : h('section.simple-help', h('div', h('h2', { text: 'A little help, when you need it.' }), h('p', { text: 'Connect your home comfort provider to ask about recurring air problems.' })), h('a.simple-link', { href: '#/settings', text: 'Connect a provider →' }));
-    fill(this.body, hero, recovery, metrics, cause, clues, story, help);
+    fill(this.body, hero, recovery, aqiPanel(room, f, () => openLocationPicker(f)), metrics, cause, clues, story, help);
     this.body.querySelectorAll('details[data-key]').forEach(d => { d.open = this.expanded.has(d.dataset.key); });
     if (focusKey) this.el.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`)?.focus({ preventScroll: true });
   }
@@ -89,12 +91,50 @@ export class SimpleView {
     return h('div.simple-section-head', h('div', h('h2', { text: title }), h('p', { text: subtitle })), action);
   }
 
+  chemicalPanel(room) {
+    const analysis = room.chemicalSources;
+    if (!analysis?.available) return null;
+    const past = analysis.history;
+    const current = analysis.current;
+    const hyp = current?.hypothesis;
+    const confident = hyp && hyp.source !== 'unknown' && current.feedback?.correct !== false;
+    const minutes = n => n == null ? '—' : `${Math.max(1, Math.round(n))} min`;
+    const stats = h('div.chemical-stats',
+      h('div', h('strong', { text: String(past.eventCount) }), h('span', { text: 'Recorded events' })),
+      h('div', h('strong', { text: minutes(past.medianDurationMinutes) }), h('span', { text: 'Typical duration' })),
+      h('div', h('strong', { text: minutes(past.medianRecoveryMinutes) }), h('span', { text: 'Peak to recovery' })));
+    const breakdown = [...past.sourceBreakdown, ...(past.unresolvedCount ? [{ label: 'Source unclear', count: past.unresolvedCount }] : [])];
+    return h('article.chemical-panel',
+      h('div.chemical-intro', h('div', h('div.simple-kicker', { text: 'CHEMICALS & ODORS' }), h('h3', { text: current ? confident ? `Possibly ${hyp.label.toLowerCase()}` : 'A gas-sensor rise. The cause is unclear.' : 'Where could they come from?' })),
+        h('span.chemical-label', { text: current ? `${confident ? hyp.confidence.level[0].toUpperCase() + hyp.confidence.level.slice(1) : 'Low'} confidence` : 'Source guide + room history' })),
+      h('p.chemical-summary', { text: current ? 'The gas sensor responds to many everyday sources. We compare it with particles, timing and your room’s usual levels to narrow the possibilities.' : past.summary }),
+      current ? h('p.chemical-reading', { text: `Event peak · eTVOC ${Math.round(current.peak)} ppb${Number.isFinite(current.baseline) ? ` · Baseline ${Math.round(current.baseline)} ppb` : ''} · Gas-sensor estimates` }) : null,
+      current ? this.disclosure('chemical-current', 'Why this explanation?', evidenceList(hyp?.confidence?.evidence || [])) : null,
+      this.disclosure('chemical-history', 'Explore sources & room patterns', h('div',
+        h('p.chemical-limit', { text: analysis.limitation }),
+        h('div.chemical-sources', ...analysis.commonSources.map((p, i) => h('div', h('span.chemical-source-number', { text: `0${i + 1}` }), h('h4', { text: p.title }), h('p', { text: p.examples }), h('p.chemical-source-clue', { text: p.clue }), h('p.chemical-source-action', { text: p.action })))),
+        h('div.chemical-history-head', h('h4', { text: 'What your room history shows' }), h('span', { text: past.daysObserved == null ? 'Available history · up to 30 days' : `${past.daysObserved < 1 ? 'Less than a day' : `${Math.floor(past.daysObserved)} days`} of history · up to 30 days` })),
+        stats,
+        current ? h('p', { text: past.summary }) : null,
+        past.eventCount ? h('div.chemical-breakdown', ...breakdown.map(p => h('div', h('div', h('span', { text: p.label }), h('strong', { text: `${p.count} / ${past.eventCount}` })), h('div.chemical-bar', h('span', { style: { width: `${p.count / past.eventCount * 100}%` } })))), h('p', { text: 'Possible sources from the event engine, not confirmed identifications. Duration and recovery use completed events only.' })) : null,
+        past.typicalTiming ? h('p.chemical-timing', { text: `${past.typicalTiming.label}: ${past.typicalTiming.count} of ${past.typicalTiming.total} events. Time of day alone does not establish the cause.` }) : null,
+        past.associations.length ? h('div.chemical-associations', ...past.associations.map(a => h('p', { text: `${a.label}: ${a.count} ${a.count === 1 ? 'event' : 'events'} within 20 minutes of your notes. ${a.recurring ? 'Repeated timing match.' : 'Still learning.'} Timing is not proof of a cause.` }))) : h('p', { text: 'Add an activity note when you cook, clean or use scented products. We’ll look for repeated timing matches.' }),
+        h('a.simple-link', { href: analysis.referenceUrl, target: '_blank', rel: 'noopener noreferrer', text: 'About common VOC sources · EPA ↗' }),
+      )),
+    );
+  }
+
   metric(m, online, warm) {
     return h('article.simple-metric', h('div.simple-metric-heading', h('h3', { text: NAMES[m.channel] }), h('span', { text: !online ? warm ? 'Settling' : 'Last reading' : m.bandLabel })),
       h('div.simple-metric-value', { text: warm ? '—' : m.text }), h('div.simple-technical', { text: `${m.technical}${m.kind === 'derived' ? ' · estimate' : ' · measured'}` }),
       h('p', { text: MEANINGS[m.channel] }),
       h('div.simple-baseline', { text: m.baseline?.text || 'Learning what’s usual for this room.' }),
       online && m.ratioText ? h('div.simple-trend', { text: m.ratioText }) : null,
+      m.channel === 'tvoc' ? h('button.simple-link', { type: 'button', text: 'What causes this? ↓', 'data-focus': 'chemical-link', onclick: () => {
+        this.expanded.add('chemical-history');
+        const detail = this.body.querySelector('[data-key="chemical-history"]');
+        if (detail) { detail.open = true; detail.querySelector('summary')?.focus({ preventScroll: true }); this.body.querySelector('.chemical-panel')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+      } }) : null,
     );
   }
 
