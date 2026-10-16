@@ -60,6 +60,9 @@ export function householdSection(feed) {
     const equipment = h("div.check-list", ...EQUIPMENT.map(([key, label]) => h("label", h("input", { type: "checkbox", checked: equipmentSet.has(key), onchange: (e) => { const next = home.equipment.filter((x) => x.type !== key); if (e.target.checked) next.push({ id: `eq-${key}`, type: key, label }); save({ equipment: next }, "Equipment updated"); } }), label)));
 
     const contractor = hh.contractor;
+    const providerSelect = h('select', { 'aria-label': 'Choose service provider' }, h('option', { value: '', text: 'Choose your provider…' }));
+    homeApi.providers().then(providers => { for (const p of providers) providerSelect.append(h('option', { value: p.id, text: p.name })); }).catch(() => {});
+    const connectProvider = h('div.row.wrap', providerSelect, h('button.btn', { text: 'Connect provider', onclick: async () => { if (!providerSelect.value) return; try { await homeApi.connectProvider(home.id, providerSelect.value, false); await feed.reloadHousehold(); toast('Provider connected. Enable sharing when you are ready.'); } catch (e) { toast(e.message, 'err'); } } }));
     const contractorRows = contractor
       ? [row(contractor.name, toggle(contractor.shareInsights, (on) => save({ shareInsights: on }, on ? "Sharing air insights" : "Sharing paused")), `Share air insights with ${contractor.name}. When off, they cannot see this home at all.`),
         row("What is shared", h("span.faint.tiny", { text: "Status, recurring patterns, measurements, equipment and the context above. Never raw second-by-second data." }))]
@@ -79,7 +82,7 @@ export function householdSection(feed) {
       h("div.card.settings-group", row("Installed", equipment, "Used to tailor actions (e.g. run your purifier) and contractor insights.")),
       h("div", { style: { height: "14px" } }),
       h("h2.section-label", { text: "Service provider" }),
-      h("div.card.settings-group", ...contractorRows),
+      h("div.card.settings-group", ...contractorRows, row("Choose or change provider", connectProvider, "Connecting a provider starts with sharing off. You control access.")),
       h("div", { style: { height: "14px" } }),
     );
   }

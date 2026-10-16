@@ -23,6 +23,9 @@ async function call(method, path, body) {
 }
 
 export const homeApi = {
+  createHousehold: name => call('POST', `${HOME}/households`, { name }),
+  providers: () => call('GET', `${HOME}/providers`),
+  connectProvider: (id, contractorId, shareInsights) => call('POST', `${HOME}/households/${id}/provider`, { contractorId, shareInsights }),
   me: () => call("GET", `${HOME}/me`),
   scenarios: () => call("GET", `${HOME}/scenarios`),
   household: (id) => call("GET", `${HOME}/households/${id}`),

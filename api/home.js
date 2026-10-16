@@ -47,6 +47,36 @@ export function homeRouter({ store, service, env = process.env }) {
     });
   });
 
+  router.post('/households', (req, res) => {
+    const household = store.upsertHousehold({ name: str(req.body?.name, 60) || 'My home', members: [req.principal.email], timeZone: 'UTC', rooms: [], equipment: [], profile: {} });
+    res.status(201).json({ household });
+  });
+
+  router.get('/providers', (req, res) => {
+    res.json(Object.values(store.state.contractors).filter(c => !c.demo || demoEnabled(env)).map(c => ({ id: c.id, name: c.name })));
+  });
+
+  // Staff accounts are provisioned only by an administrator. A homeowner
+  // chooses a registered provider and explicitly decides whether to share.
+  router.post('/providers', (req, res) => {
+    if (!req.principal.isAdmin) return res.status(403).json({ error: 'Administrator access required.' });
+    const name = str(req.body?.name, 80);
+    const members = Array.isArray(req.body?.members) ? req.body.members.filter(e => typeof e === 'string' && /^[^@\s]+@[^@\s]+$/.test(e)).slice(0, 30) : [];
+    if (!name || !members.length) return res.status(400).json({ error: 'Provider name and staff emails required.' });
+    const contact = req.body?.contact || {};
+    const safeUrl = v => { try { const u = new URL(v); return u.protocol === 'https:' ? u.href : null; } catch { return null; } };
+    const contractor = store.upsertContractor({ name, members, contact: { phone: str(contact.phone, 40), email: str(contact.email, 120), bookingUrl: safeUrl(contact.bookingUrl), messageUrl: safeUrl(contact.messageUrl) } });
+    res.status(201).json({ contractor });
+  });
+
+  router.post('/households/:id/provider', loadHousehold(true), (req, res) => {
+    const contractor = store.getContractor(str(req.body?.contractorId, 80));
+    if (!contractor) return res.status(404).json({ error: 'Provider not found.' });
+    for (const a of store.state.assignments.filter(a => a.householdId === req.household.id)) a.relationshipStatus = 'ended';
+    const relationship = store.assign({ householdId: req.household.id, contractorId: contractor.id, shareInsights: req.body?.shareInsights === true });
+    res.json({ relationship });
+  });
+
   router.get('/scenarios', (req, res) => {
     res.json(Object.values(SCENARIOS).map((s) => ({ key: s.key, label: s.label, description: s.description, roomType: s.roomType, capabilities: s.capabilities, expect: s.expect })));
   });
@@ -98,10 +128,10 @@ export function homeRouter({ store, service, env = process.env }) {
     const room = store.roomOf(req.household.id, req.params.roomId);
     if (!room) return res.status(404).json({ error: 'Room not found.' });
     const summary = await service.summaryForRoom(req.household, room, { debug: req.query.debug === '1' && req.isMember, fahrenheit: req.query.units === 'f' });
-    res.json(summary);
+    res.json(req.isMember ? summary : { ...summary, debug: undefined, homeownerRecommendations: summary.homeownerRecommendations.map(x => ({ id: x.id, title: x.title, acknowledged: x.acknowledged })) });
   });
 
-  router.get('/households/:id/rooms/:roomId/series', loadHousehold(), (req, res) => {
+  router.get('/households/:id/rooms/:roomId/series', loadHousehold(true), (req, res) => {
     const room = store.roomOf(req.household.id, req.params.roomId);
     if (!room) return res.status(404).json({ error: 'Room not found.' });
     const seconds = Math.min(7 * 86400, Math.max(600, Number(req.query.seconds) || 3600));
@@ -130,7 +160,7 @@ export function homeRouter({ store, service, env = process.env }) {
     res.json({ ok: true, ...out });
   });
 
-  router.get('/households/:id/contact-requests', loadHousehold(), (req, res) => {
+  router.get('/households/:id/contact-requests', loadHousehold(true), (req, res) => {
     res.json(store.contactRequestsFor({ householdId: req.household.id }));
   });
 

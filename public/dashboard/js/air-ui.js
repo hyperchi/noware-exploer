@@ -208,7 +208,7 @@ export function openContactModal({ type, contractor, build, send }) {
         if (result.fallback.bookingUrl) links.push(h("a.btn", { href: result.fallback.bookingUrl, target: "_blank", rel: "noreferrer", text: "Book online" }));
         status.append(h("div.faint.tiny", { text: "Direct messaging is not connected yet, so use one of these to reach them. The summary is included." }), h("div.row.wrap", ...links));
       }
-      sendBtn.textContent = "Sent";
+      sendBtn.textContent = "Recorded";
     } catch (err) {
       status.textContent = err.message;
       sendBtn.disabled = false;

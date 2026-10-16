@@ -58,6 +58,10 @@ export class HomeView {
       );
       fill(this.rooms, h("div.faint", { text: "No home connected." }));
       fill(this.contractorHost);
+    } else if (me && !me.households.length) {
+      this.hero.className = 'card home-hero q-none';
+      fill(this.hero, h('span.eyebrow', { text: 'Your home' }), h('div.home-status', { text: 'Welcome home' }), h('div.home-sub', { text: 'Create your home, then add rooms and connect an AirCube.' }), h('button.btn.primary', { text: 'Create my home', onclick: async () => { try { const { household } = await homeApi.createHousehold('My home'); feed.me = await homeApi.me(); feed.setHousehold(household.id); } catch (e) { toast(e.message, 'err'); } } }));
+      fill(this.rooms); fill(this.contractorHost);
     } else if (!summary) {
       this.hero.className = "card home-hero q-none";
       fill(this.hero, h("span.eyebrow", { text: "Your home" }), h("div.home-status", { text: feed.error ? "Could not load your home" : "Loading…" }), feed.error ? h("div.home-sub", { text: feed.error }) : null);
