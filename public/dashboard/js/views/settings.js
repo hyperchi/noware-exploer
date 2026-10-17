@@ -8,8 +8,9 @@
 
 import { h, clear, pillPicker, toggle, toast, confirmDialog } from "../ui.js";
 import { prefs, applyAppearance } from "../prefs.js";
+import { householdSection, settingsFold } from "./household-settings.js";
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "2.0.0";
 
 function row(label, control, sub) {
   return h(
@@ -36,17 +37,18 @@ function numberField(value, { min, max, step = 1, disabled = false, onCommit }) 
 }
 
 export class SettingsView {
-  constructor(registry, { onBack, onFlash }) {
+  constructor(registry, { onBack, onFlash, feed }) {
     this.registry = registry;
     this.onBack = onBack;
     this.onFlash = onFlash;
 
     this.deviceSection = h("div");
+    this.householdSection = feed ? householdSection(feed) : h("div");
 
     this.el = h(
-      "div.column.narrow",
+      "main.simple-settings",
       h(
-        "div.page-header",
+        "div.settings-header",
         h("button.toolbtn", {
           type: "button",
           text: "\u2190",
@@ -54,12 +56,13 @@ export class SettingsView {
           "aria-label": "Back",
           onclick: () => this.onBack(),
         }),
-        h("h1.detail-title", { text: "Settings" }),
+        h('a.settings-brand', { href: '#/simple', text: 'Noware' }),
       ),
-      this._displaySection(),
-      this.deviceSection,
-      this._firmwareSection(),
-      this._aboutSection(),
+      h('div.settings-intro', h('div.simple-kicker', { text: 'MAKE YOURSELF AT HOME' }), h('h1', { text: 'A few simple choices.' }), h('p', { text: 'Your home, your preferences. Change only what you need.' })),
+      this.householdSection,
+      settingsFold('display', 'Display', 'Temperature units and appearance.', this._displaySection()),
+      settingsFold('advanced', 'Advanced', 'Device controls, firmware and about.', this.deviceSection, this._firmwareSection(), this._aboutSection()),
+      h('a.settings-done.simple-button.primary', { href: '#/simple', text: 'Back to your air →' }),
     );
   }
 
@@ -124,7 +127,7 @@ export class SettingsView {
       h("h2.section-label", { text: "About" }),
       h(
         "div.card.settings-group",
-        row("Noware dashboard", h("span.faint", { text: `v${APP_VERSION}` })),
+        row("Noware AirCube", h("span.faint", { text: `v${APP_VERSION}` }), "Air measurements and guidance for your home."),
         row(
           "Based on",
           h("a", {
@@ -186,14 +189,14 @@ export class SettingsView {
 
     const group = h(
       "div.card.settings-group",
-      row(
+      !proOnly ? row(
         "Auto-dim at night",
         toggle(autoDim.enabled, (on) => push({ enabled: on }), { disabled: proOnly }),
         proOnly
           ? "Pro only. This cube has no ambient light sensor."
           : "Dims the LED once the room goes dark.",
-      ),
-      row(
+      ) : null,
+      !proOnly ? row(
         "Night starts below",
         numberField(autoDim.nightEnterLux, {
           min: 0,
@@ -202,8 +205,8 @@ export class SettingsView {
           onCommit: (v) => push({ nightEnterLux: v }),
         }),
         "lux",
-      ),
-      row(
+      ) : null,
+      !proOnly ? row(
         "Day resumes above",
         numberField(autoDim.dayExitLux, {
           min: 0,
@@ -212,8 +215,8 @@ export class SettingsView {
           onCommit: (v) => push({ dayExitLux: v }),
         }),
         "lux",
-      ),
-      row(
+      ) : null,
+      !proOnly ? row(
         "Night brightness",
         numberField(autoDim.nightDimPct, {
           min: 0,
@@ -222,7 +225,7 @@ export class SettingsView {
           onCommit: (v) => push({ nightDimPct: v }),
         }),
         "percent of the configured brightness",
-      ),
+      ) : null,
       row(
         "Sensor readout period",
         numberField(config?.readoutPeriod ?? 1000, {
@@ -234,7 +237,7 @@ export class SettingsView {
         }),
         "milliseconds between readings (100-10000)",
       ),
-      row(
+      !proOnly ? row(
         "Calibrate CO2 to 425 ppm",
         h("button.btn", {
           type: "button",
@@ -245,7 +248,7 @@ export class SettingsView {
         proOnly
           ? "Pro only. This cube has no SCD41 CO2 sensor."
           : "Leave the cube in outdoor or open-window air for at least 10 minutes, then calibrate. Sets the current reading to 425 ppm.",
-      ),
+      ) : h('p.settings-hint', { text: 'CO₂ calibration and automatic dimming are not available through this device connection.' }),
     );
 
     return h(

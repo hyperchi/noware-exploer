@@ -1,0 +1,14 @@
+{
+  "name": "noware-aircube-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Headless collector that reads an AirCube over USB and publishes readings to the noware relay.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node collector.js"
+  },
+  "dependencies": {
+    "serialport": "^13.0.0"
+  }
+}

@@ -4,7 +4,8 @@ const page=await browser.newPage({viewport:{width:1440,height:1050}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 const testUrl=new URL(process.env.TEST_URL||'http://localhost:5173');testUrl.searchParams.set('view','playground');
 await page.goto(testUrl.href);
-await page.locator('#playground > summary').click();
+// Current main opens the explorer directly; older layouts used a details gate.
+if (await page.locator('#playground > summary').count()) await page.locator('#playground > summary').click();
 await page.locator('#pcb .footprint').first().waitFor();
 await page.keyboard.press('Escape');
 await page.getByRole('button',{name:'U7 ESP32-H2-MINI-1'}).click();

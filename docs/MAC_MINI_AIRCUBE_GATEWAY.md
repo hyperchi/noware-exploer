@@ -1,0 +1,313 @@
+# Moving the AirCube to the Mac mini gateway
+
+The AirCube is attached to the development Mac today. When it moves to the office Mac
+mini, that machine becomes the always-on collector: `gateway/collector.js`
+reads the cube over USB and publishes to the noware relay, and every signed-in
+dashboard (laptop, phone, contractor view) reads from the relay. No browser tab
+needs to stay open anywhere.
+
+Nothing in the gateway is tied to a machine. The serial port is discovered by
+USB id, paths come from the home directory at runtime, and the only secret is
+the bearer token, which lives in a gitignored `.env` file on the mini and in
+Secret Manager / Cloud Run on the server.
+
+Local development uses exactly the same collector against a local server, so
+the migration is: same steps, different `NOWARE_API` and token.
+
+| | Local Mac (today) | Mac mini (later) |
+|---|---|---|
+| `NOWARE_API` | `http://localhost:8080` (`npm run build && npm start`) | `https://noware.so` |
+| `GATEWAY_TOKEN` | any 32+ char string, also passed to the local server as `GATEWAY_TOKENS` | the token stored in Cloud Run's `GATEWAY_TOKENS` |
+| Start | `node gateway/collector.js` in a terminal | LaunchAgent (step 6) |
+
+## 1. Clone or update the repository
+
+```sh
+# first time
+git clone --branch feature/air-intelligence https://github.com/hyperchi/noware-exploer.git
+cd noware-exploer
+
+# later updates
+cd noware-exploer
+git fetch origin
+git switch feature/air-intelligence
+git pull --ff-only origin feature/air-intelligence
+```
+
+Node 20 or newer is required (`node --version`). Install it with the official
+installer or Homebrew (`brew install node`). The Mac mini does not need Vite,
+Playwright or the explorer build; only the gateway's own dependencies.
+
+## 2. Install dependencies
+
+```sh
+cd gateway
+npm ci
+```
+
+This installs `serialport` (with a prebuilt binary for Apple silicon and
+Intel). Nothing is installed globally and the root project's `package.json`
+is untouched.
+
+## 3. Device permissions on macOS
+
+The AirCube uses the ESP32-H2's built-in USB Serial/JTAG, which macOS drives
+with its own class driver: no kernel extension, no driver download, no `sudo`.
+The device node (`/dev/cu.usbmodem…`) is world read/write, so the logged-in
+user can open it.
+
+Checks:
+
+```sh
+ls -l /dev/cu.usbmodem*          # one entry per plugged-in cube
+system_profiler SPUSBDataType | grep -A6 "USB JTAG/serial debug unit"
+```
+
+Use a data-capable USB-C cable (charge-only cables enumerate nothing). If
+the mini will run headless, keep a user logged in (or enable automatic login
+for the gateway user) so the per-user LaunchAgent in step 6 starts.
+
+## 4. Configure the environment
+
+```sh
+cd gateway
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```ini
+NOWARE_API=https://noware.so
+GATEWAY_TOKEN=<token from the step below>
+GATEWAY_LABEL=office-mac-mini
+AIRCUBE_DEVICE_KEY=aircube-office
+AIRCUBE_ROOM=Office
+```
+
+`.env` is gitignored. Do not commit it and do not paste the token into chat
+or tickets.
+
+### Generating the token and enabling it on Cloud Run
+
+Generate a token on any machine:
+
+```sh
+openssl rand -base64 48 | tr -d '/+=' | cut -c1-44
+```
+
+Put the same value in the server's `GATEWAY_TOKENS` (comma separated if
+several gateways exist; each token must be at least 32 characters). The
+preferred way is a Secret Manager secret referenced by the Cloud Run service,
+matching how `SESSION_SECRET` is handled. Run these from a workstation with
+`gcloud` access to project `noware-hardware`; do not run them from the mini:
+
+```sh
+# one-time: create the secret and grant the runtime service account access
+printf '%s' '<token>' | gcloud secrets create noware-gateway-tokens \
+  --project=noware-hardware --data-file=-
+gcloud secrets add-iam-policy-binding noware-gateway-tokens \
+  --project=noware-hardware \
+  --member=serviceAccount:noware-runtime@noware-hardware.iam.gserviceaccount.com \
+  --role=roles/secretmanager.secretAccessor
+
+# attach it to the service (preserves the other env vars and secrets)
+gcloud run services update noware \
+  --project=noware-hardware --region=us-central1 \
+  --update-secrets=GATEWAY_TOKENS=noware-gateway-tokens:latest
+```
+
+Rotating a token later means adding a new secret version and restarting the
+gateway with the new value; the old one stops working as soon as the service
+picks up the new version. If `GATEWAY_TOKENS` is unset on the server, no
+gateway can publish; browser publishing keeps working.
+
+For a local server, pass the token directly:
+
+```sh
+# repo root, in another terminal
+npm run build
+SESSION_SECRET=$(openssl rand -base64 48) GATEWAY_TOKENS=<token> npm start
+```
+
+## 5. Start the collector
+
+```sh
+cd gateway
+node collector.js
+```
+
+Expected log lines, in order:
+
+```text
+INFO  noware gateway v0.1.0 starting {"api":"https://noware.so","publish":"enabled",...}
+INFO  health endpoint ready {"url":"http://127.0.0.1:8787/health"}
+INFO  cube connected {"port":"/dev/cu.usbmodem2101","serialNumber":"74:4D:BD:69:0C:9F","matched":"usb-id"}
+INFO  cube answers commands {"ledPercent":100,"readoutPeriodMs":1000}
+INFO  cube capabilities {"model":"base","pm":true,"pmValid":true,"trueCo2":true,"illuminance":false,...,"fw":"2.0.7"}
+INFO  history synced {"slots":1009,"windowS":300}
+INFO  history published {"slots":1009}
+INFO  publish ok {"api":"https://noware.so"}
+```
+
+`Ctrl-C` flushes the buffer and closes the port cleanly.
+
+## 6. Install as a persistent startup service (LaunchAgent)
+
+The template `gateway/launchd/com.noware.aircube-gateway.plist` runs the
+collector at login, restarts it if it exits, and logs to `/tmp`. It reads
+`gateway/.env` itself, so the plist contains no secret.
+
+```sh
+# At the repository root; creates a plist with XML-safe absolute paths.
+python3 - <<'PYAGENT'
+from pathlib import Path
+import plistlib, shutil, datetime
+repo = Path.cwd()
+node = shutil.which('node')
+assert node and (repo / 'gateway/collector.js').exists()
+target = Path.home() / 'Library/LaunchAgents/com.noware.aircube-gateway.plist'
+target.parent.mkdir(parents=True, exist_ok=True)
+if target.exists():
+    backup = target.with_suffix('.plist.' + datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.backup')
+    shutil.copy2(target, backup)
+logs = Path.home() / 'Library/Logs/noware'
+logs.mkdir(parents=True, exist_ok=True)
+with target.open('wb') as f:
+    plistlib.dump({ 'Label': 'com.noware.aircube-gateway',
+        'ProgramArguments': [node, str(repo / 'gateway/collector.js')],
+        'WorkingDirectory': str(repo / 'gateway'), 'RunAtLoad': True,
+        'KeepAlive': True, 'ThrottleInterval': 10,
+        'StandardOutPath': str(logs / 'gateway.log'),
+        'StandardErrorPath': str(logs / 'gateway.err.log') }, f)
+PYAGENT
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.noware.aircube-gateway.plist
+launchctl print gui/$(id -u)/com.noware.aircube-gateway | head -20
+```
+
+Useful commands:
+
+```sh
+launchctl kickstart -k gui/$(id -u)/com.noware.aircube-gateway   # restart (e.g. after git pull)
+launchctl bootout gui/$(id -u)/com.noware.aircube-gateway        # uninstall
+tail -f ~/Library/Logs/noware/gateway.log
+```
+
+Stop the terminal instance from step 5 before bootstrapping the agent: two
+collectors cannot share the port, and the relay only accepts one publisher at
+a time (the second one logs `publish blocked`).
+
+## 7. Verify the device is detected
+
+```sh
+curl -s http://127.0.0.1:8787/health
+```
+
+Look for:
+
+```json
+"connected": true,
+"port": "/dev/cu.usbmodem2101",
+"model": "base",
+"fwVersion": "2.0.7",
+"capabilities": { "pm": true, "trueCo2": true, "illuminance": false, ... },
+"commandSupport": "ok",
+"lastReadingAt": 1792183220.915
+```
+
+`lastReadingAt` should advance about once a second (`date +%s` for
+comparison). `capabilities` is derived from the frames, so a cube without a
+particle sensor shows `"pm": false` and the dashboards hide particle tiles.
+
+## 8. Verify readings reach the backend
+
+In the same health output:
+
+```json
+"publish": {
+  "enabled": true,
+  "lastPublishStatus": "ok",
+  "lastPublishAt": 1792183262.193,
+  "buffered": 1,
+  "needHistory": false
+}
+```
+
+`buffered` stays small (readings are flushed every 3 s). From any signed-in
+browser you can also read the relay directly: `https://noware.so/api/cube`
+returns JSON with `"publisherKind": "gateway"`, your `GATEWAY_LABEL` as
+`publisher`, `"online": true`, recent `live` readings and `slots`.
+
+## 9. Verify the dashboard shows the device online
+
+Open `https://noware.so/dashboard/` on any machine and sign in. The cube
+appears as the shared device, named `<AIRCUBE_ROOM> cube`, with a live status
+and the room you configured. Live values should match the health endpoint's
+`lastReading`. The history chart fills from the slots the gateway uploaded.
+
+Then unplug the cube for 30 seconds: the dashboard must show it offline with
+the last reading time, not keep displaying the old values as current. Plug it
+back in and the gateway reconnects on its own (`cube connected` in the log).
+
+## 10. Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| `connect failed {"error":"no AirCube found (USB 303A:1001)"}` repeating | Cable is charge-only, cube unpowered, or a USB hub is not enumerating. `ls /dev/cu.usbmodem*` must list it. Set `AIRCUBE_PORT` only if the id ever changes. |
+| `connect failed ... Resource busy` | Another process has the port: a browser tab with the dashboard connected over USB, a second collector, or `idf.py monitor`. `lsof /dev/cu.usbmodem*` names it. |
+| `cube streams readings but ignores commands (legacy firmware)` | Firmware older than February 2026. Live readings still publish; history does not. Flash current firmware from the dashboard's Flash firmware dialog. |
+| `publish unauthorized` | Token mismatch between `.env` and the server's `GATEWAY_TOKENS`, or the token is shorter than 32 characters. |
+| `publish blocked ... another publisher owns the relay` | A browser tab or another gateway is publishing. It is retried every 30 s and takes over once the other side has been quiet for 30 s. |
+| `publish unavailable` | Server unreachable (network, DNS, local server not running). Readings buffer (up to 4000) and flush when it returns. |
+| Readings arrive but `needHistory` stays `true` | The cube refused or timed out on history paging; the next 15-minute resync retries. `LOG_LEVEL=debug` shows the cube's own log lines. |
+| Cube reboots when the collector starts/stops | Should not happen (DTR high, RTS low after open). If it does on a particular hub, report the hub; sensor warm-up restarts take about 3 minutes. |
+| LaunchAgent not running after reboot | No user logged in. Enable automatic login for the gateway user, or convert to a LaunchDaemon (runs before login; needs the plist in `/Library/LaunchDaemons` with `UserName` set). |
+| `health` port already in use | Change `GATEWAY_HEALTH_PORT` in `.env`. |
+| Capture files growing | Default retention is 14 days under `~/.noware-gateway/captures`; set `GATEWAY_CAPTURE_DAYS`. |
+
+Capture files are the replay source for the dashboard's scenario replay: one
+JSON object per line, timestamp in unix seconds, `source: "physical"`.
+
+
+## Which home the cube belongs to
+
+The server attaches a gateway's cube to the household of the token's owner. Append the owner's sign-in email to the token entry on the server:
+
+```
+GATEWAY_TOKENS=<token>:winston@noso.so
+```
+
+Several gateways use a comma-separated list. The room is the one named by `AIRCUBE_ROOM` (created if missing); the device key `AIRCUBE_DEVICE_KEY` keeps the same room across restarts. A token without an owner still publishes to the shared relay, but the air-intelligence home view cannot place the cube in a room.
+
+
+## Branch-specific migration checklist
+
+1. Stop the collector/browser on the development Mac before moving the cube. No firmware change is required. Do not open the same serial device from two processes.
+2. Fetch/check out `feature/air-intelligence` on the mini (or use merged main after a separate reviewed merge). Run `npm ci --prefix gateway` from the root.
+3. Copy `gateway/.env.example` to `gateway/.env`, set `NOWARE_API` to the backend running this feature, set `GATEWAY_TOKEN`, and set the same `AIRCUBE_DEVICE_KEY` used before migration. The backend token entry must be `<token>:<homeowner Google email>`. The bare token goes on the mini. Preserve the device key to preserve room history; serial path can change freely. With no configured key, USB serial identity is used automatically.
+4. Leave `AIRCUBE_PORT` unset to discover USB by vendor/product ID. macOS built-in USB/JTAG does not need BLE permission. BLE/Zigbee collector ingestion is not implemented, and no BLE pairing is needed for this USB flow.
+5. Start `node gateway/collector.js`; check `curl http://127.0.0.1:8787/health`. Confirm `connected`, a recent `lastReadingAt`, capabilities, ENS status and successful `publish`. Give sensors their actual firmware-indicated warm-up time.
+6. Sign in at the configured backend's `/dashboard/`; verify the Office room, physical badge, actual PM2.5/CO2 and recent timestamp. With `NODE_ENV=production`, no demo home is created. The Google email on the token must match the signed-in owner. The existing public production site does not acquire this feature until it is separately deployed.
+7. Unplug/replug once on the mini: expect stale/offline, then reconnect and possibly warm-up. Check that old values are labelled historical, no false incident appears, and ingestion resumes.
+8. Stop the terminal collector and install the LaunchAgent using the safe plist generator above. If an agent is already installed, `launchctl bootout` it before `bootstrap`; the generator preserves the old plist as a backup. Verify health after login/restart. No LaunchAgent was installed on this development Mac by the implementation.
+
+For a backend hosted on the mini, also install root dependencies and build the app. Set `NOWARE_DATA_DIR` to a private persistent directory so household relationships, actions, rollups and events survive restart. Keep this separate from gateway capture/state. A cloud backend instead uses `NOWARE_STORE_BUCKET` as described in the architecture document. The gateway's 4000-sample retry queue is in memory; daily capture files persist independently and are not automatically replayed after a process restart. Copy the gateway state/capture directory separately if those local captures are needed on the mini. It contains no server session secret.
+
+## Exact local development startup (isolated checkout)
+
+```sh
+cd /path/to/noware-air-intelligence
+npm ci
+npm ci --prefix gateway
+npm run build
+export SESSION_SECRET="$(openssl rand -base64 48)"
+export GATEWAY_TOKEN="$(openssl rand -hex 32)"
+export GATEWAY_TOKENS="$GATEWAY_TOKEN:you@noso.so"
+export NOWARE_DATA_DIR="$HOME/.noware-air-intelligence"
+export DEV_LOGIN_EMAIL=you@noso.so
+export NOWARE_DEMO=0
+PORT=8080 npm start
+```
+
+Open `http://localhost:8080/dev-login` for local development only. The development route does not exist when `NODE_ENV=production`. A fresh account can create its home in the dashboard; publishing an owned physical cube also provisions its home/room. To explore the full three-room homeowner/contractor demo, restart with `NOWARE_DEMO=1` using a separate data directory. Never set `DEV_LOGIN_EMAIL` on a public server.
+
+In another terminal, configure the gateway `.env` with `NOWARE_API=http://localhost:8080`, the same bare `GATEWAY_TOKEN`, a stable device key and room, then run `node gateway/collector.js`. Stop the old collector first. Keep tokens out of shell history by editing the gitignored file locally. The code never requires a fixed username, hostname, IP address or USB device path.

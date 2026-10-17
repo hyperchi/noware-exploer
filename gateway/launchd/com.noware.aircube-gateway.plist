@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent template for the noware AirCube gateway.
+
+  Replace the two placeholders before installing:
+    __NODE__  absolute path to the node binary (output of `which node`,
+              or `command -v node`; Homebrew: /opt/homebrew/bin/node)
+    __REPO__  absolute path to the noware-exploer checkout
+
+  Configuration (token, API URL, room) lives in __REPO__/gateway/.env, which
+  the collector reads itself, so no secret appears in this file.
+
+  Install (per user, no sudo):
+    sed -e "s|__NODE__|$(command -v node)|g" -e "s|__REPO__|$PWD|g" \
+        gateway/launchd/com.noware.aircube-gateway.plist \
+        > ~/Library/LaunchAgents/com.noware.aircube-gateway.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.noware.aircube-gateway.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.noware.aircube-gateway</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__NODE__</string>
+    <string>__REPO__/gateway/collector.js</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO__/gateway</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/noware-aircube-gateway.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/noware-aircube-gateway.err.log</string>
+</dict>
+</plist>

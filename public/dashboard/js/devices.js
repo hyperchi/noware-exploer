@@ -17,6 +17,18 @@ const ONLINE_WINDOW_S = 15;
 const NAMES_KEY = "aircube.names";
 const FRC_DONE_KEY = "aircube.frcDone";
 
+/**
+ * Command probe budget.
+ *
+ * A cube on pre-February-2026 firmware never reads the USB port, so every
+ * byte sent lands in the ESP32-H2's 64-byte receive FIFO for good. The probe
+ * therefore sends get_config (21 bytes) at most PROBE_MAX_ATTEMPTS times per
+ * connection, 63 bytes in all, and nothing else until the cube has proven it
+ * can answer. Exceeding the FIFO is what made writes hang forever.
+ */
+export const PROBE_MAX_ATTEMPTS = 3;
+export const PROBE_TIMEOUT_MS = 2500;
+
 let nextId = 1;
 
 function loadNames() {
@@ -77,7 +89,7 @@ export class Device extends EventTarget {
     this.port = port;
     this.link = new SerialLink(port);
 
-    this.name = loadNames()[slot] || (slot === 0 ? "Noware" : `Noware ${slot + 1}`);
+    this.name = loadNames()[slot] || (slot === 0 ? "noware" : `noware ${slot + 1}`);
     this.isPro = false;
     this.fwVersion = "";
     this.frcNeeded = false;
@@ -105,16 +117,126 @@ export class Device extends EventTarget {
     // instead of dropping it out from under the reconnect.
     this.flashGraceUntil = 0;
 
+    /**
+     * Whether this cube answers commands over USB.
+     *   "unknown" -- not probed yet, or the cube has not said anything.
+     *   "ok"      -- get_config was answered; the full protocol is available.
+     *   "none"    -- the cube streams live frames but ignores commands:
+     *                firmware from before February 2026. Nothing further is
+     *                written to it (see PROBE_MAX_ATTEMPTS).
+     */
+    this.commandSupport = "unknown";
+    /** Settles when the probe has reached a verdict for this connection. */
+    this.ready = Promise.resolve();
+    /** Bumped on every connect, so views can tell a fresh session apart. */
+    this.connectionId = 0;
+    this._probeAttempts = 0;
+    this._probing = null;
+    this._liveCount = 0;
+
     this._wireLink();
   }
 
   _wireLink() {
     this.link.addEventListener("live", (e) => this._onLive(e.detail));
     this.link.addEventListener("config", (e) => this._onConfig(e.detail));
+    this.link.addEventListener("stalled", () => this._onStalled());
     this.link.addEventListener("closed", () => {
       this.isConnected = false;
       this._changed();
     });
+  }
+
+  /** True once the cube has shown it cannot hear commands over USB. */
+  get legacyFirmware() {
+    return this.commandSupport === "none";
+  }
+
+  /** Throw a friendly error instead of writing to a cube that cannot listen. */
+  _requireCommands() {
+    if (this.legacyFirmware || this.link.writeStalled) {
+      throw new Error(proto.LEGACY_FIRMWARE_MESSAGE);
+    }
+  }
+
+  _onStalled() {
+    // A write that hangs is the FIFO-full symptom of the same deaf firmware.
+    this.commandSupport = "none";
+    this.syncError = "";
+    this._changed();
+  }
+
+  /**
+   * Find out whether the cube takes commands, spending as few bytes as
+   * possible. Runs after connect and again if the cube only starts streaming
+   * later (a cold-plugged cube spends its first second or two booting).
+   */
+  _probe() {
+    if (this._probing) return this._probing;
+    if (this.commandSupport !== "unknown" || !this.isConnected) return Promise.resolve();
+    if (this._probeAttempts >= PROBE_MAX_ATTEMPTS) return Promise.resolve();
+
+    const connection = this.connectionId;
+    this._probing = (async () => {
+      const liveBefore = this._liveCount;
+      this._probeAttempts++;
+      try {
+        const reply = await this.link.send(proto.cmdGetConfig(), proto.isConfigReply, {
+          timeoutMs: PROBE_TIMEOUT_MS,
+          retries: 0,
+        });
+        if (this.connectionId !== connection) return;
+        this.commandSupport = "ok";
+        this.syncError = "";
+        this._onConfig(proto.parseConfig(reply.config));
+        return;
+      } catch {
+        if (this.connectionId !== connection || !this.isConnected) return;
+      }
+      if (this.link.writeStalled) {
+        this.commandSupport = "none";
+      } else if (this._liveCount > liveBefore && this._probeAttempts >= 2) {
+        // Streaming readings while the question went unanswered, twice in a
+        // row: talk-only firmware. A single miss is forgiven because a line
+        // can be lost while the cube is still booting.
+        this.commandSupport = "none";
+        this.syncError = "";
+      }
+      this._changed();
+    })().finally(() => {
+      this._probing = null;
+    });
+    this.ready = this._probing;
+    return this._probing;
+  }
+
+  /**
+   * Resolve once the probe has a verdict, the byte budget is spent, or the
+   * cube has stayed silent long enough that there is nothing to learn.
+   */
+  async whenProbed() {
+    while (this.isConnected && this.commandSupport === "unknown") {
+      if (this._probing) {
+        await this._probing.catch(() => {});
+        continue;
+      }
+      if (this._probeAttempts >= PROBE_MAX_ATTEMPTS) break;
+      // Nothing in flight: the next live frame starts another attempt. A cube
+      // that says nothing for this long is not going to.
+      const progressed = await new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          this.removeEventListener("change", onChange);
+          resolve(false);
+        }, PROBE_TIMEOUT_MS * 2);
+        const onChange = () => {
+          clearTimeout(timer);
+          this.removeEventListener("change", onChange);
+          resolve(true);
+        };
+        this.addEventListener("change", onChange);
+      });
+      if (!progressed) break;
+    }
   }
 
   /**
@@ -130,6 +252,9 @@ export class Device extends EventTarget {
     this.link = new SerialLink(port);
     this._wireLink();
     this.isConnected = false;
+    // New firmware may be running now; find out afresh on the next connect.
+    this.commandSupport = "unknown";
+    this._probeAttempts = 0;
     this._changed();
   }
 
@@ -142,7 +267,7 @@ export class Device extends EventTarget {
   }
 
   get modelLabel() {
-    return this.isPro ? "Noware Pro" : "Noware Base";
+    return this.lastReading?.pmPresent ? "noware + particles" : this.isPro ? "noware Pro" : "noware Base";
   }
 
   get lastUpdated() {
@@ -154,6 +279,7 @@ export class Device extends EventTarget {
   }
 
   _onLive(reading) {
+    this._liveCount++;
     this.lastReading = reading;
     this.liveReadings.push(reading);
     const cutoff = reading.timestamp - LIVE_RANGE_SECONDS;
@@ -167,9 +293,16 @@ export class Device extends EventTarget {
     this.frcNeeded = Boolean(reading.frcNeeded);
     this.dispatchEvent(new CustomEvent("reading", { detail: reading }));
     this._changed();
+    // The cube is talking. If it has not yet proven it can listen, ask again
+    // (within the byte budget) now that it is certainly booted.
+    if (this.commandSupport === "unknown" && this.isConnected && !this._probing) {
+      this._probe().catch(() => {});
+    }
   }
 
   _onConfig(config) {
+    // Any config reply proves the cube hears us, however late it arrives.
+    this.commandSupport = "ok";
     this.config = config;
     this.ledPercent = Math.round(config.intensity * 100);
     this._changed();
@@ -179,10 +312,16 @@ export class Device extends EventTarget {
     if (this.isConnected || this.heldForFlash) return;
     await this.link.open();
     this.isConnected = true;
+    this.connectionId++;
+    this.commandSupport = "unknown";
+    this._probeAttempts = 0;
+    this._liveCount = 0;
     this._changed();
-    // Seed brightness and auto-dim state; a cube that is mid-boot may not
-    // answer yet, and the periodic live stream will still work if it doesn't.
-    this.refreshConfig().catch(() => {});
+    // Seed brightness and auto-dim state, and at the same time learn whether
+    // this cube can hear us at all. A cube that is mid-boot may not answer
+    // yet; the periodic live stream still works if it doesn't, and the probe
+    // is retried once frames start arriving.
+    this._probe().catch(() => {});
   }
 
   async disconnect() {
@@ -192,12 +331,15 @@ export class Device extends EventTarget {
   }
 
   async refreshConfig() {
+    this._requireCommands();
     const reply = await this.link.send(proto.cmdGetConfig(), proto.isConfigReply);
+    this.commandSupport = "ok";
     this._onConfig(proto.parseConfig(reply.config));
     return this.config;
   }
 
   async setBrightness(percent) {
+    this._requireCommands();
     const pct = Math.max(0, Math.min(100, Math.round(percent)));
     this.ledPercent = pct;
     this._changed();
@@ -205,12 +347,14 @@ export class Device extends EventTarget {
   }
 
   async setAutoDim(options) {
+    this._requireCommands();
     await this.link.sendNoReply(proto.cmdSetAutoDim(options));
     if (this.config) this.config.autoDim = { ...this.config.autoDim, ...options };
     this._changed();
   }
 
   async setReadoutPeriod(ms) {
+    this._requireCommands();
     await this.link.sendNoReply(proto.cmdSetReadoutPeriod(ms));
     if (this.config) this.config.readoutPeriod = Math.round(ms);
     this._changed();
@@ -223,11 +367,12 @@ export class Device extends EventTarget {
    */
   async runCo2Frc() {
     if (!this.isPro) {
-      throw new Error("CO2 calibration is only available on Noware Pro");
+      throw new Error("CO2 calibration is only available on noware Pro");
     }
     if (!this.isConnected) {
       throw new Error("Cube is not connected");
     }
+    this._requireCommands();
     const reply = await this.link.send(proto.cmdScd41Frc(), proto.isScd41FrcReply, {
       timeoutMs: 15000,
       retries: 0,
@@ -249,7 +394,7 @@ export class Device extends EventTarget {
     this.frcNeeded = false;
     this.pendingFrcNudge = false;
     markFrcSettled(this.slot);
-    if (!this.isConnected) return;
+    if (!this.isConnected || this.legacyFirmware) return;
     await this.link.send(proto.cmdScd41FrcAck(), proto.statusReply("scd41_frc_ack"));
   }
 
@@ -271,6 +416,12 @@ export class Device extends EventTarget {
    */
   async syncHistory() {
     if (this.isSyncing || !this.isConnected) return;
+    // Let the probe finish first: the history commands are the bytes that
+    // would overflow a deaf cube's FIFO, and the detail page asks for a sync
+    // the moment it opens.
+    if (this.commandSupport === "unknown") await this.whenProbed();
+    if (this.legacyFirmware || !this.isConnected || this.isSyncing) return;
+
     this.isSyncing = true;
     this.syncError = "";
     this.syncProgress = { current: 0, total: 0 };
@@ -335,6 +486,7 @@ export class Device extends EventTarget {
   }
 
   async clearHistory() {
+    this._requireCommands();
     await this.link.sendNoReply(proto.cmdClearHistory());
     this.slots = [];
     this.historyVersion++;
@@ -523,7 +675,7 @@ export class DeviceRegistry extends EventTarget {
     this._changed();
   }
 
-  /** A cube shared from another laptop (see share.js). */
+  /** A cube shared from another machine (see share.js). */
   addRemote(device) {
     device.addEventListener("change", () => this._changed());
     this.devices.push(device);

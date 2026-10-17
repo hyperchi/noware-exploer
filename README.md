@@ -98,8 +98,37 @@ The library includes two proposed solution entries separate from the 44 installe
 
 The design simulator is now USB-C-only. Legacy battery settings are removed when restoring saved state. Controls expose the 5 V source current budget, radio rail current/voltage and conversion efficiency. Results show USB input watts, Wh/day, average and peak input current, and headroom; neither battery runtime nor USB PD negotiation is modeled. The default 500 mA is an editable planning input, not a guarantee of any USB source. Supply availability must be established from the actual source, cable and advertised/negotiated capability.
 
+## Air intelligence (dashboard)
+
+`/dashboard/` retains the original device cards and sensor/chart console. The added **Simple view** (`#/simple`) presents a plain-language status, one next step, visible measurements, pet/dust and outdoor-smoke clues, and homeowner activity notes. The optional **Air insights** view (`#/intelligence`) answers, for each room: what is in the air, whether that is normal for this home, what probably caused it, what to do, whether it worked, and whether to ask your contractor. The numbers stay visible under every conclusion. See [docs/AIR_INTELLIGENCE_ARCHITECTURE.md](docs/AIR_INTELLIGENCE_ARCHITECTURE.md) for the design and [docs/MAC_MINI_AIRCUBE_GATEWAY.md](docs/MAC_MINI_AIRCUBE_GATEWAY.md) for running the headless collector on the office Mac mini.
+
+- Engine: `lib/air-intelligence/` (pure ES modules, shared by server, browser and tests). Capabilities come from the device's frames: the AirCube with the SEN63C reports PM1/PM2.5/PM4/PM10 and true CO2; a legacy Base has neither and is treated accordingly.
+- Server: `/api/home` (homeowner) and `/api/contractor` (contractor), authorization in `lib/authz.js`, store in `lib/home-store.js` (local JSON with `NOWARE_DATA_DIR`, or private GCS snapshots with `NOWARE_STORE_BUCKET`; otherwise ephemeral).
+- Gateway: `gateway/` publishes a USB cube to the relay with a bearer token (`GATEWAY_TOKENS=<token>:<owner email>` on the server). The browser path (Web Serial) still works and is used on laptops.
+- Demo: outside production (`NODE_ENV` not `production`; `NOWARE_DEMO=1` cannot override production) the first sign-in seeds a demo household, contractor and customers with simulated data, always labelled. Set `NOWARE_DEMO=0` to disable. Production never seeds.
+- Simulator: every room can run a scenario (home menu "Try a scenario", or the room menu). Scenarios cover healthy, cooking, repeated cooking, smoke/combustion, cleaning, dust, outdoor pollution, overnight ventilation, persistent particles, shower, high humidity, pet/allergy context, sensor offline, warm-up, equipment before/after, unknown mixed and a legacy Base cube.
+
+Verification:
+
+```sh
+npm test
+npm run build
+SESSION_SECRET=<secret> NODE_ENV=development PORT=8089 node server.js
+SESSION_SECRET=<same secret> TEST_URL=http://localhost:8089 node scripts/air-browser-check.mjs
+```
+
+Environmental guidance only, never medical advice. Simulated data is always labelled as such.
+
 ## Deploy from GitHub
 
 Push to `main` to validate and deploy automatically to https://noware.so on GCP. You can also use [Actions → Deploy noware to GCP](https://github.com/hyperchi/noware-exploer/actions/workflows/deploy-gcp.yml) and select **Run workflow** on `main`. Pull requests run checks without production access. Keyless GCP authentication and repository deployment variables are configured; the runtime login secret stays in Secret Manager. See `infrastructure/README.md` for permissions and deployment details.
 
 Run `node scripts/library-models-check.mjs` to load all 46 entries and check model bounds/camera controls. Additional STEP assets use `node scripts/convert-step.mjs <model-name> <source.step>`; reconstructions use `node scripts/prepare-datasheet-models.mjs`. Sources and material treatments are recorded in `public/models/README.md`.
+
+### Simple view: AQI, source patterns and settings
+
+Open `/dashboard/#/simple` for the companion view; the original dashboard remains at `/dashboard/`. Choose your city/postal code under **Set your location** for regional outdoor PM2.5. Indoor and outdoor AQI use the same **2024 US EPA PM2.5 NowCast** calculation. The outdoor estimate comes from Open-Meteo / CAMS, and is not a measurement directly outside your home. Commercial production use requires a configured `OPEN_METEO_API_KEY`; local development can use the public endpoint.
+
+**Chemicals & odors → What causes this?** opens the common-source guide and your room's recorded event patterns, durations, recovery and activity-note matches. Sources are hypotheses, not chemical identification. Settings now group optional home, people/pets, equipment and provider choices, with firmware/calibration under Advanced.
+
+For a local physical-device session, set `NOWARE_DEMO=0` and follow [the gateway guide](docs/MAC_MINI_AIRCUBE_GATEWAY.md). Keep the feature branch local for review; do not deploy until explicitly approved.

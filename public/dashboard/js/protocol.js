@@ -1,8 +1,12 @@
 /* AirCube USB serial wire protocol.
  *
  * Port of the JSON-lines half of aircubetray/aircubeapp/protocol.py, which
- * tracks firmware/main/serial_protocol.c. See the Serial Protocol Reference in
- * CONTRIBUTING.md for the authoritative message list.
+ * tracks firmware/main/serial_protocol.c in hyperchi/Noso_AirCube. See the
+ * Serial Protocol Reference in that repository's CONTRIBUTING.md for the
+ * authoritative message list.
+ *
+ * This module is pure: no DOM, no globals. The Node gateway (gateway/) and the
+ * tests import it as well as the browser.
  */
 
 /** ESP32-H2 built-in USB Serial/JTAG. */
@@ -14,6 +18,22 @@ export const SEQ_NONE = 0xffff;
 export const HISTORY_PAGE = 48;
 
 const JSON_PATTERN = /\{.*\}/;
+
+/**
+ * Shown wherever a cube turns out to be running firmware that streams readings
+ * but cannot hear commands (see Device.commandSupport in devices.js).
+ *
+ * Cubes shipped before February 2026 read commands from the UART0 pins rather
+ * than the USB Serial/JTAG port, so over USB they are talk-only: the live
+ * frame arrives every second, but get_config, set_intensity and the history
+ * commands are never seen. Worse, every byte the host sends piles up in the
+ * chip's 64-byte USB receive FIFO, and once that is full the host's writes hang.
+ * Firmware from 2026-02-08 onwards (release 1.3 and later) reads the USB port.
+ */
+export const LEGACY_FIRMWARE_MESSAGE =
+  "This cube runs firmware from before February 2026, which cannot receive " +
+  "commands over USB. Live readings work, but brightness, history and settings " +
+  "need a firmware update. Updating takes about 30 seconds.";
 
 /** Pull the JSON object out of a line that may carry ESP_LOG noise around it. */
 export function extractJson(line) {
@@ -36,44 +56,72 @@ const num = (v) => {
  * Parse the periodic sensor JSON object into a normalized live reading.
  *
  * Since firmware 1.5.0 `ens16x.aqi` is the VOC Level index (0-500), which is a
- * different number from `ens16x.etvoc` in ppb despite the similar names: the
- * tiles show etvoc, the advanced drawer shows the index. Pro units add
- * scd41.co2 and vcnl4040.lux; older firmware omits `model`, and firmware
- * before 2.0.3 omits `fw`.
+ * different number from `ens16x.etvoc` in ppb despite the similar names.
+ * Pro units add scd41.co2 and vcnl4040.lux. Boards with the Sensirion SEN63C
+ * fitted add a `sen63c` object with PM1/PM2.5/PM4/PM10 and a direct CO2
+ * reading of their own; on those boards temperature and humidity also come
+ * from the SEN63C, still under the legacy `ens210` keys. Older firmware omits
+ * `model`, and firmware before 2.0.3 omits `fw`.
+ *
+ * Every field below is also what the share relay (api/cube.js) and the
+ * gateway accept, so keep the three in step.
+ *
+ * @param {object} data one decoded serial frame
+ * @param {{timestamp?: number}} [options] wall-clock seconds for the reading;
+ *   defaults to now. The cube has no clock: its own `timestamp` is ms since boot.
  */
-export function parseLive(data) {
+export function parseLive(data, { timestamp } = {}) {
   const ens210 = data.ens210 || {};
   const ens16x = data.ens16x || {};
   const scd41 = data.scd41 || {};
   const vcnl = data.vcnl4040 || {};
   const sen63c = data.sen63c || {};
+  const health = data.health || {};
+  const model = data.model;
   const senCo2Valid = sen63c.present === true && sen63c.co2_valid === true &&
     typeof sen63c.co2 === "number" && Number.isFinite(sen63c.co2) && sen63c.co2 > 0;
   const co2 = Math.round(num(senCo2Valid ? sen63c.co2 : scd41.co2));
-  const model = data.model;
+  const isPro = model !== undefined ? model === "pro" : num(scd41.co2) > 0;
+  const hasTrueCo2 = senCo2Valid || isPro || (model === undefined && co2 > 0);
+  const etvocRaw = typeof ens16x.etvoc === "number" ? ens16x.etvoc : NaN;
+  const ensStatus = typeof ens16x.status === "string" ? ens16x.status : "";
+  // "OK" is the only status under which the ENS161 vouches for its gas output;
+  // "Warming Up" covers the 3-minute warm-up and the 1-hour first-run
+  // conditioning, "No Valid Output" a sensor that has nothing to say.
+  const vocReady = ensStatus === "" || ensStatus === "OK";
+  const etvocValid =
+    Number.isFinite(etvocRaw) && etvocRaw >= 0 && (health.etvoc_valid !== false) && vocReady;
   return {
+    timestamp: Number.isFinite(timestamp) ? timestamp : Date.now() / 1000,
+    uptimeMs: Math.round(num(data.timestamp)),
+    source: "physical",
     temperatureC: num(ens210.temperature_c),
     humidity: num(ens210.humidity),
     vocLevel: Math.round(num(ens16x.aqi)),
     eco2: Math.round(num(ens16x.eco2)),
-    etvoc: Math.round(num(ens16x.etvoc)),
+    etvoc: Math.max(0, Math.round(num(ens16x.etvoc))),
     co2,
     lux: num(vcnl.lux),
+    aqiUba: Math.round(num(ens16x.aqi_uba)),
     pmPresent: sen63c.present === true,
     pmValid: sen63c.present === true && sen63c.valid === true &&
-      [sen63c.pm1_0, sen63c.pm2_5, sen63c.pm4_0, sen63c.pm10_0].every(
-        (value) => typeof value === "number" && Number.isFinite(value) && value >= 0,
-      ),
+      [sen63c.pm1_0, sen63c.pm2_5, sen63c.pm4_0, sen63c.pm10_0].every(v => typeof v === "number" && Number.isFinite(v) && v >= 0),
     pm1: num(sen63c.pm1_0),
     pm25: num(sen63c.pm2_5),
     pm4: num(sen63c.pm4_0),
     pm10: num(sen63c.pm10_0),
-    hasTrueCo2: senCo2Valid || model === "pro" || (model === undefined && co2 > 0),
-    aqiUba: Math.round(num(ens16x.aqi_uba)),
-    isPro: model !== undefined ? model === "pro" : co2 > 0,
+    isPro,
+    hasTrueCo2,
+    hasLux: isPro,
+    ensStatus,
+    warmingUp: ensStatus === "Warming Up",
+    tempValid: Number.isFinite(ens210.temperature_c) && (health.temp_valid !== undefined ? health.temp_valid === true : ens210.status !== 0),
+    humValid: Number.isFinite(ens210.humidity) && (health.hum_valid !== undefined ? health.hum_valid === true : ens210.status !== 0),
+    co2Valid: hasTrueCo2 && (health.co2_valid !== undefined ? Boolean(health.co2_valid) : co2 > 0),
+    etvocValid,
+    sensorMissing: Boolean(health.sensor_missing),
     fwVersion: typeof data.fw === "string" ? data.fw : "",
-    frcNeeded: Boolean(data.health && data.health.frc_needed),
-    timestamp: Date.now() / 1000,
+    frcNeeded: Boolean(health.frc_needed),
   };
 }
 
@@ -101,7 +149,10 @@ export function fwLte(version, ceiling) {
  * Parse one slot of a get_history page.
  *
  * Serial keys: t_*=temp x100, h_*=humidity x100, q_*=VOC level, c_*=CO2 (true
- * CO2 when available, otherwise eCO2), v_*=eTVOC, p_*=PM2.5 x10.
+ * CO2 where the board has it, eCO2 on legacy Base), v_*=eTVOC, p_*=PM2.5 x10.
+ * The firmware writes INT16_MIN / 0xFFFF into a channel that had no valid
+ * samples in the window; those come back as NaN so charts draw a gap instead
+ * of a plausible-looking number.
  */
 export function parseHistorySlot(s) {
   const seq = Math.round(num(s.seq));
@@ -191,6 +242,8 @@ export const cmdScd41Frc = () => '{"cmd":"scd41_frc"}';
 
 export const cmdScd41FrcAck = () => '{"cmd":"scd41_frc_ack"}';
 
+export const cmdGetSensorHealth = () => '{"cmd":"get_sensor_health"}';
+
 // ------------------------------------------------------------- reply shapes
 
 /** Matchers pair a sent command with the reply line that answers it. */
@@ -200,3 +253,4 @@ export const isHistoryReply = (d) => Array.isArray(d.history);
 export const isLive = (d) => d.ens210 !== undefined;
 export const statusReply = (cmd) => (d) => d.status !== undefined && d.cmd === cmd;
 export const isScd41FrcReply = (d) => d.cmd === "scd41_frc";
+export const isSensorHealthReply = (d) => d.probe !== undefined && d.model_source !== undefined;

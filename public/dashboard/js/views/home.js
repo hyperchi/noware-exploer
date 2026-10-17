@@ -227,6 +227,8 @@ export class HomeView {
           text: "\u2190",
         }),
         h("h1.page-title", { text: "Noware dashboard" }),
+        h("a.btn", { href: "#/simple", text: "Simple view" }),
+        h("a.btn", { href: "#/intelligence", text: "Air insights" }),
         h("div.spacer"),
         h("button.toolbtn", {
           type: "button",
