@@ -8,11 +8,15 @@
 import { LIVE_RANGE_SECONDS } from "./quality.js";
 
 const API = "/api/cube";
-const FLUSH_MS = 3000;
-const POLL_MS = 3000;
+// Every request passes through a metered Cloudflare Worker. The flush must stay
+// well under the server's 30 s publisher lease and 20 s online window.
+const FLUSH_MS = 10000;
+const POLL_MS = 10000;
+// Nothing to show when this tab is the publisher or no cube is shared.
+const IDLE_POLL_MS = 30000;
 // New 5-minute slots only arrive on the cube, so re-read them periodically.
 const RESYNC_MS = 15 * 60 * 1000;
-const ONLINE_WINDOW_S = 20;
+const ONLINE_WINDOW_S = 30;
 
 /** Identifies this tab as a publisher, so it does not also list its own cube twice. */
 const PUBLISHER_ID =
@@ -233,15 +237,24 @@ export class ShareFeed {
     this.remote = null;
     this.liveSince = 0;
     this.stopped = false;
+    this.lastPolledAt = -Infinity;
   }
 
   start() {
+    if (this.timer || this.stopped) return;
     this.poll();
     this.timer = setInterval(() => this.poll(), POLL_MS);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) return;
+      this.poll();
+    });
   }
 
-  async poll() {
-    if (this.stopped || this.polling) return;
+  async poll({ force = false } = {}) {
+    if (this.stopped || this.polling || document.hidden) return;
+    const interval = this.remote ? POLL_MS : IDLE_POLL_MS;
+    if (!force && Date.now() - this.lastPolledAt < interval) return;
+    this.lastPolledAt = Date.now();
     this.polling = true;
     try {
       const version = this.remote ? this.remote.serverHistoryVersion : -1;
@@ -264,7 +277,7 @@ export class ShareFeed {
       if (!this.remote || (this.remote.publisher && this.remote.publisher !== body.publisher)) {
         this._drop();
         this.remote = new RemoteDevice();
-        this.remote.onRefresh = () => this.poll();
+        this.remote.onRefresh = () => this.poll({ force: true });
         this.registry.addRemote(this.remote);
       }
       const offset = Date.now() / 1000 - body.serverNow;

@@ -27,7 +27,8 @@ import {
 } from "../air-ui.js";
 import { SCENARIOS } from "../local-intelligence.js";
 
-const REFRESH_MS = 5000;
+// Room summaries and trends also pass through the metered Worker.
+const REFRESH_MS = 10000;
 const RANGES = [
   { label: "Past hour", seconds: 3600 },
   { label: "Today", seconds: 86400 },
@@ -111,7 +112,11 @@ export class RoomView {
 
   start() {
     clearInterval(this._timer);
-    this._timer = setInterval(() => { this.refresh(); if (this.rangeSeconds <= 3600) this.loadSeries(); }, REFRESH_MS);
+    this._timer = setInterval(() => {
+      if (document.hidden) return;
+      this.refresh();
+      if (this.rangeSeconds <= 3600) this.loadSeries();
+    }, REFRESH_MS);
   }
 
   stop() {
