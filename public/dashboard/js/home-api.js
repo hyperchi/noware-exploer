@@ -7,7 +7,8 @@
 
 const HOME = "/api/home";
 const CONTRACTOR = "/api/contractor";
-const POLL_MS = 2000;
+// Every request passes through a metered Cloudflare Worker, so keep this slow.
+const POLL_MS = 10000;
 
 async function call(method, path, body) {
   const res = await fetch(path, {
@@ -67,6 +68,7 @@ export class HomeFeed extends EventTarget {
     this.error = "";
     this._timer = null;
     this._polling = false;
+    this._lastPolledAt = -Infinity;
   }
 
   async start() {
@@ -83,6 +85,9 @@ export class HomeFeed extends EventTarget {
     }
     this._emit();
     this._timer = setInterval(() => this.refresh().catch(() => {}), POLL_MS);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && Date.now() - this._lastPolledAt >= POLL_MS) this.refresh().catch(() => {});
+    });
   }
 
   setHousehold(id) {
@@ -95,8 +100,9 @@ export class HomeFeed extends EventTarget {
   }
 
   async refresh() {
-    if (!this.available || !this.householdId || this._polling) return;
+    if (!this.available || !this.householdId || this._polling || document.hidden) return;
     this._polling = true;
+    this._lastPolledAt = Date.now();
     try {
       const [household, summary] = await Promise.all([
         this.household && this._householdFetchedAt && Date.now() - this._householdFetchedAt < 30000 ? this.household : homeApi.household(this.householdId).then((h) => { this._householdFetchedAt = Date.now(); return h; }),
@@ -108,9 +114,26 @@ export class HomeFeed extends EventTarget {
     } catch (err) {
       this.error = err.message;
       if (err.status === 401) this.available = false;
+      if (err.status === 404) await this._replaceMissingHousehold();
     } finally {
       this._polling = false;
       this._emit();
+    }
+  }
+
+  /** The household was deleted or replaced: switch to one that exists, or stop polling. */
+  async _replaceMissingHousehold() {
+    const missing = this.householdId;
+    this.householdId = null;
+    this.household = null;
+    this.summary = null;
+    this._householdFetchedAt = 0;
+    try {
+      this.me = await homeApi.me();
+      this.householdId = this.me.households.find((h) => h.id !== missing)?.id || null;
+    } catch (err) {
+      this.error = err.message;
+      if (err.status === 401) this.available = false;
     }
   }
 
