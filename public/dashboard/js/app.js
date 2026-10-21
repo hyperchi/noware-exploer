@@ -26,6 +26,8 @@ import { ContractorListView, ContractorHomeView } from "./views/contractor.js";
 import { openFlashModal } from "./views/flash-modal.js";
 import { maybeOfferUpgradeCalibration } from "./frc-nudge.js";
 import { LocalRoomSource, ScenarioSource } from "./local-intelligence.js";
+import { DASHBOARD_VERSION } from "./release.js";
+import { DashboardUpdates, canReloadDashboard } from "./updates.js";
 
 const STALE_TICK_MS = 2000;
 
@@ -93,6 +95,24 @@ class App {
       }
     }
     this.render();
+    this.updates = new DashboardUpdates({
+      version: DASHBOARD_VERSION,
+      canReload: () => canReloadDashboard(this.registry),
+      onUpdate: () => {
+        const notice = h("div.banner", { role: "status" },
+          h("span", { text: "A dashboard update is ready. Finish device work and save any changes, then reload to apply it." }),
+          h("button.btn", { type: "button", text: "Reload dashboard", onclick: () => {
+            if (this.registry.devices.some(device => !device.isRemote && (device.heldForFlash || device.inFlashGrace || device.isSyncing))) {
+              toast("Wait for the device operation to finish before reloading.", "warn");
+              return;
+            }
+            location.reload();
+          } }),
+        );
+        document.querySelector("#app").prepend(notice);
+      },
+    });
+    this.updates.start();
     setInterval(() => this.refreshActive(), STALE_TICK_MS);
   }
 
