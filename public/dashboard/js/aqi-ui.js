@@ -14,7 +14,7 @@ export function aqiPanel(room, feed, onLocation) {
     return h('article.aqi-card', { 'data-band': ready ? result.band : 'unknown' },
       h('div.simple-kicker', { text: title }),
       h('div.aqi-result', h('div.aqi-number', { text: ready ? result.text : '—' }),
-        h('div.aqi-category', h('span.aqi-status-dot', { 'aria-hidden': 'true' }), ready ? result.label : outside && !area ? 'Choose your area' : 'Not available yet')),
+        h('div.aqi-category', h('span.aqi-status-dot', { 'aria-hidden': 'true' }), ready ? result.label : outside && !area && onLocation ? 'Choose your area' : 'Not available yet')),
       h('p.aqi-metric', { text: 'US AQI · PM2.5 · NowCast estimate' }),
       ready ? h('p', { text: `PM2.5 weighted average: ${result.pm25.toFixed(1)} µg/m³` }) : h('p', { text: result.reason }),
       h('p.aqi-origin', { text: outside ? 'Regional outdoor model · Open-Meteo / CAMS' : room.deviceHealth.simulated ? 'Simulated readings · not your AirCube' : 'Measured by your AirCube · AQI calculated' }),
@@ -23,7 +23,7 @@ export function aqiPanel(room, feed, onLocation) {
   };
   return h('section.simple-section.aqi-section',
     h('div.simple-section-head', h('div', h('h2', { text: 'Your room & outside' }), h('p', { text: 'The same air-quality scale, inside and out.' })),
-      h('button.simple-button', { type: 'button', text: area ? 'Change area' : 'Set your location', 'data-focus': 'aqi-location', onclick: onLocation })),
+      !onLocation ? null : h('button.simple-button', { type: 'button', text: area ? 'Change area' : 'Set your location', 'data-focus': 'aqi-location', onclick: onLocation })),
     h('div.aqi-pair', card(room.roomName, indoor), card(area?.label ? `Outside · ${area.label.split(',')[0]}` : 'Outside near you', comparison.outdoor, true)),
     h('div.aqi-comparison', { text: live ? comparison.explanation : 'Both values use the same US EPA PM2.5 scale and NowCast calculation.' }),
     h('details.simple-disclosure', { 'data-key': 'aqi-method' }, h('summary', { text: 'How these AQI numbers compare', 'data-focus': 'aqi-method' }),

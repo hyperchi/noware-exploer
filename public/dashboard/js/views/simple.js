@@ -43,7 +43,7 @@ export class SimpleView {
       rooms.length ? h('label', 'Room', h('select', { 'data-focus': 'room', onchange: e => { this.roomId = e.target.value; this.refresh(); } }, ...rooms.map(r => h('option', { value: r.roomId, selected: r.roomId === this.roomId, text: r.roomName })))) : null,
     );
     if (!room || f.error) {
-      fill(this.body, h('section.simple-hero', h('div.simple-kicker', { text: 'YOUR HOME' }), h('h1', { text: f.error ? 'Let’s reconnect.' : f.summary ? 'Welcome home.' : 'Checking your air…' }), h('p', { text: f.error ? 'We cannot get a current reading right now. Check your connection or open the original dashboard.' : 'Your connected AirCube will appear here. Add a home or room in Settings if needed.' }), h('a.simple-button', { href: '#/settings', text: 'Open settings' })));
+      fill(this.body, h('section.simple-hero', h('div.simple-kicker', { text: 'YOUR HOME' }), h('h1', { text: f.error ? 'Let’s reconnect.' : f.summary || (f.me && !f.householdId) ? 'Welcome home.' : 'Checking your air…' }), h('p', { text: f.error ? 'We cannot get a current reading right now. Check your connection or open the original dashboard.' : 'Your connected AirCube will appear here. Add a home or room in Settings if needed.' }), h('a.simple-button', { href: '#/settings', text: 'Open settings' })));
       return;
     }
     const now = Date.now() / 1000;
@@ -56,6 +56,8 @@ export class SimpleView {
     const rec = online ? room.homeownerRecommendations.find(r => r.level === 'diy') || room.homeownerRecommendations[0] : null;
     const roomHref = `#/room/${encodeURIComponent(f.householdId)}/${encodeURIComponent(room.roomId)}`;
     const tone = !online ? 'quiet' : good ? 'good' : 'attention';
+    // Shared office room: every Noso account can read it; only members change it.
+    const canEdit = f.household?.isMember !== false;
     const current = issue ? room.measurements.find(m => m.channel === issue.channel) || issue.measurement : null;
     const hero = h(`section.simple-hero.${tone}`,
       h('div.simple-hero-main',
@@ -66,7 +68,7 @@ export class SimpleView {
         h('div.simple-health', simpleIcon('device'), h('span', { text: `${room.deviceName || 'AirCube'} · ${online ? 'Updated ' : 'Last reading '}${readingAge(age)}${room.deviceHealth.simulated ? ' · Simulated data' : ' · Physical sensor'}` })),
       ),
       h('aside.simple-next', h('div.simple-kicker', { text: 'WHAT TO DO' }),
-        rec ? recommendationCard(rec, { onAck: async r => { try { await homeApi.ack(f.householdId, issue.eventId, r.id); await f.refresh(); toast('Saved. We’ll keep watching the air.'); } catch (e) { toast(e.message, 'err'); } }, onContact: () => this.contact(room), contractorName: f.household?.contractor?.name })
+        rec ? recommendationCard(rec, { onAck: !canEdit ? null : async r => { try { await homeApi.ack(f.householdId, issue.eventId, r.id); await f.refresh(); toast('Saved. We’ll keep watching the air.'); } catch (e) { toast(e.message, 'err'); } }, onContact: () => this.contact(room), contractorName: f.household?.contractor?.name })
           : h('div', h('div.simple-next-mark', simpleIcon(good ? 'check' : 'device')), h('h2', { text: warm ? 'Give it a little time.' : !online ? 'Check your AirCube.' : good ? 'Carry on with your day.' : 'Keep an eye on the readings.' }), h('p', { text: warm ? 'Warm-up values will not be treated as an air problem.' : !online ? 'Check its power and USB connection. Your readings will return automatically.' : good ? 'We’ll keep watching for changes.' : 'Open the room details for the measurements and guidance.' }), !online ? h('a.simple-link', { href: '#/', text: 'Open device dashboard →' }) : !good ? h('a.simple-link', { href: roomHref, text: 'See room details →' }) : null)),
     );
     const recovery = room.recovery && online ? h('div.simple-recovery', h('span', { 'aria-hidden': 'true', text: room.recovery.state === 'improving' || room.recovery.state === 'resolved' ? '↘' : '↔' }), h('div', h('strong', { text: 'Is it getting better?' }), h('p', { text: room.recovery.text }))) : null;
@@ -78,16 +80,16 @@ export class SimpleView {
       this.disclosure('cause', 'See the evidence', evidenceList(issue.evidence)),
     ) : null;
     const patterns = room.sourcePatterns;
-    const clues = h('section.simple-section', this.sectionHead('Understand the patterns', 'Your measurements. A little context. A clearer picture.', h('button.simple-button', { type: 'button', text: '+ Add an activity note', 'data-focus': 'add-note', onclick: () => this.addNote(room) })),
+    const clues = h('section.simple-section', this.sectionHead('Understand the patterns', 'Your measurements. A little context. A clearer picture.', !canEdit ? null : h('button.simple-button', { type: 'button', text: '+ Add an activity note', 'data-focus': 'add-note', onclick: () => this.addNote(room) })),
       this.chemicalPanel(room),
       h('div.simple-patterns', ...(patterns?.cards || []).map(p => this.pattern(p))),
       patterns?.associations.length ? h('div.simple-associations', ...patterns.associations.map(a => h('div', h('strong', { text: `${a.label} · ${a.recurring ? 'Repeated timing match' : 'Still learning'}` }), h('p', { text: a.text })))) : null,
-      patterns?.recentObservations.length ? this.disclosure('notes', 'Your activity notes', h('ul.simple-notes', ...patterns.recentObservations.map(o => h('li', h('div', h('strong', { text: o.label }), h('span', { text: `You recorded · ${new Date(o.occurredAt * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${clockText(o.occurredAt)}` }), o.note ? h('p', { text: o.note }) : null), h('button.simple-link', { type: 'button', text: 'Remove', 'aria-label': `Remove ${o.label} note`, 'data-focus': `remove-${o.id}`, onclick: async () => { try { await homeApi.removeObservation(f.householdId, o.id); await f.refresh(); } catch (e) { toast(e.message, 'err'); } } }))))) : null,
+      patterns?.recentObservations.length ? this.disclosure('notes', 'Your activity notes', h('ul.simple-notes', ...patterns.recentObservations.map(o => h('li', h('div', h('strong', { text: o.label }), h('span', { text: `You recorded · ${new Date(o.occurredAt * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${clockText(o.occurredAt)}` }), o.note ? h('p', { text: o.note }) : null), !canEdit ? null : h('button.simple-link', { type: 'button', text: 'Remove', 'aria-label': `Remove ${o.label} note`, 'data-focus': `remove-${o.id}`, onclick: async () => { try { await homeApi.removeObservation(f.householdId, o.id); await f.refresh(); } catch (e) { toast(e.message, 'err'); } } }))))) : null,
     );
     const story = h('section.simple-section.simple-events', this.sectionHead('Recent air events', 'The changes that shaped your day.', h('a.simple-link', { href: roomHref, text: 'View room history →' })), h('div.simple-event-list', timelineList(room.timeline?.slice(-6), { empty: online ? 'No air events recorded in the last 24 hours.' : 'No recent air events recorded. Live readings are unavailable.' })));
     const provider = f.household?.contractor;
     const help = provider ? contractorCard(provider, { onContact: type => this.contact(room, type), onReport: () => this.contact(room, 'share_air_report') }) : h('section.simple-help', h('div', h('h2', { text: 'A little help, when you need it.' }), h('p', { text: 'Connect your home comfort provider to ask about recurring air problems.' })), h('a.simple-link', { href: '#/settings', text: 'Connect a provider →' }));
-    fill(this.body, hero, story, recovery, aqiPanel(room, f, () => openLocationPicker(f)), metrics, cause, clues, help);
+    fill(this.body, hero, story, recovery, aqiPanel(room, f, canEdit ? () => openLocationPicker(f) : null), metrics, cause, clues, canEdit ? help : null);
     this.body.querySelectorAll('details[data-key]').forEach(d => { d.open = this.expanded.has(d.dataset.key); });
     if (focusKey) this.el.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`)?.focus({ preventScroll: true });
   }

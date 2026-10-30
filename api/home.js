@@ -5,7 +5,7 @@ import express from 'express';
 import { unavailableOutdoor } from '../lib/air-intelligence/outdoor.js';
 import { coarseLocation } from '../lib/outdoor-provider.js';
 import { OBSERVATION_TYPES } from '../lib/air-intelligence/source-patterns.js';
-import { principalFor, canViewHousehold, canEditHousehold, contractorViewOfHousehold } from '../lib/authz.js';
+import { principalFor, canViewHousehold, canEditHousehold, contractorViewOfHousehold, isTeamViewer } from '../lib/authz.js';
 import { SCENARIOS, mergeProfile, ROOM_TYPES, EQUIPMENT_TYPES, CONTACT_ACTIONS } from '../lib/air-intelligence/index.js';
 import { demoEnabled, seedDemo, DEMO_HOUSEHOLD_ID } from '../lib/demo-seed.js';
 
@@ -35,8 +35,11 @@ export function homeRouter({ store, service, env = process.env }) {
     if (!ok) return res.status(403).json({ error: 'Not allowed for this household.' });
     req.household = h;
     req.isMember = canEditHousehold(req.principal, h.id);
+    req.isTeamViewer = isTeamViewer(req.principal, h.id);
     next();
   };
+  // Contractors stay out of raw series; members and the team may read them.
+  const loadSeriesReader = (req, res, next) => loadHousehold()(req, res, () => (req.isMember || req.isTeamViewer ? next() : res.status(403).json({ error: 'Not allowed for this household.' })));
 
   router.get('/me', (req, res) => {
     const p = req.principal;
@@ -44,7 +47,10 @@ export function homeRouter({ store, service, env = process.env }) {
       email: p.email,
       name: p.name,
       roles: p.roles,
-      households: p.householdIds.map((id) => ({ id, name: store.getHousehold(id)?.name || id, demo: Boolean(store.getHousehold(id)?.demo) })),
+      households: [
+        ...p.householdIds.map((id) => ({ id, name: store.getHousehold(id)?.name || id, demo: Boolean(store.getHousehold(id)?.demo) })),
+        ...p.teamHouseholdIds.filter((id) => !p.householdIds.includes(id)).map((id) => ({ id, name: store.getHousehold(id)?.name || id, demo: false, shared: true })),
+      ],
       contractors: p.contractorIds.map((id) => ({ id, name: store.getContractor(id)?.name || id })),
       demo: demoEnabled(env),
     });
@@ -109,7 +115,7 @@ export function homeRouter({ store, service, env = process.env }) {
     const h = req.household;
     const contractor = store.contractorFor(h.id);
     const assignment = store.assignmentFor(h.id);
-    const view = req.isMember ? h : contractorViewOfHousehold(h);
+    const view = req.isMember ? h : req.isTeamViewer ? { ...contractorViewOfHousehold(h), location: h.location || null } : contractorViewOfHousehold(h);
     res.json({
       household: { ...view, rooms: h.rooms.map((r) => ({ ...r, devices: (r.deviceKeys || []).map((k) => ({ key: k, ...(store.getDevice(k) || {}), simulation: service.simulationFor(h, r) ? service.simulationFor(h, r).scenario.key : null })) })) },
       contractor: contractor ? { id: contractor.id, name: contractor.name, tagline: contractor.tagline || '', contact: { phone: contractor.contact?.phone || null, email: contractor.contact?.email || null, messageUrl: contractor.contact?.messageUrl || null, bookingUrl: contractor.contact?.bookingUrl || null }, since: assignment?.since || null, contactMethods: assignment?.contactMethods || [], shareInsights: Boolean(assignment?.shareInsights) } : null,
@@ -145,17 +151,17 @@ export function homeRouter({ store, service, env = process.env }) {
     const debug = req.query.debug === '1' && req.isMember;
     const fahrenheit = req.query.units === 'f';
     const out = await service.summaryForHousehold(req.household, { debug, fahrenheit });
-    res.json(req.isMember ? out : stripForContractor(out));
+    res.json(req.isMember || req.isTeamViewer ? out : stripForContractor(out));
   });
 
   router.get('/households/:id/rooms/:roomId/summary', loadHousehold(), async (req, res) => {
     const room = store.roomOf(req.household.id, req.params.roomId);
     if (!room) return res.status(404).json({ error: 'Room not found.' });
     const summary = await service.summaryForRoom(req.household, room, { debug: req.query.debug === '1' && req.isMember, fahrenheit: req.query.units === 'f' });
-    res.json(req.isMember ? summary : { ...summary, debug: undefined, homeownerRecommendations: summary.homeownerRecommendations.map(x => ({ id: x.id, title: x.title, acknowledged: x.acknowledged })) });
+    res.json(req.isMember || req.isTeamViewer ? summary : { ...summary, debug: undefined, homeownerRecommendations: summary.homeownerRecommendations.map(x => ({ id: x.id, title: x.title, acknowledged: x.acknowledged })) });
   });
 
-  router.get('/households/:id/rooms/:roomId/series', loadHousehold(true), (req, res) => {
+  router.get('/households/:id/rooms/:roomId/series', loadSeriesReader, (req, res) => {
     const room = store.roomOf(req.household.id, req.params.roomId);
     if (!room) return res.status(404).json({ error: 'Room not found.' });
     const seconds = Math.min(7 * 86400, Math.max(600, Number(req.query.seconds) || 3600));

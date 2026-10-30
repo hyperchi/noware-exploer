@@ -32,8 +32,11 @@ Every signed-in `@noso.so` account can publish to and read the same live cube re
 at `/dashboard/`; there is no named-user allowlist. Owner-bound gateways for NOSO
 accounts publish into that same relay. One publisher holds the relay at a time;
 another publisher can take over after the current publisher is silent for 30 seconds.
-Approved guests and gateways without a NOSO owner remain isolated. Household and
-contractor permissions are unchanged. Viewers receive updates through the existing
+Approved guests and gateways without a NOSO owner remain isolated. The household
+holding the office cube (`TEAM_DEVICE_KEYS`, default `aircube-office` and the cube's
+USB identity) is readable by every `@noso.so` account in the Simple and room views,
+and any of them may publish that cube; only its members can change it. All other
+homes and contractor permissions are unchanged. Viewers receive updates through the existing
 polling feed (up to 30 seconds to discover a cube, then every 10 seconds).
 
 Requires Node 20.19+ or 22.12+ and Python 3 for regenerating board data.

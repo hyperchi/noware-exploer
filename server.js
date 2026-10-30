@@ -13,6 +13,7 @@ import {HomeService} from './lib/home-service.js';
 import {demoEnabled,seedDemo} from './lib/demo-seed.js';
 import {readSession,getCookie,SESSION_COOKIE,createSession,sessionCookie} from './lib/session.js';
 import {ALLOWED_DOMAIN} from './lib/auth-policy.js';
+import {canPublishTeamDevice} from './lib/authz.js';
 
 export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={}){
  const app=express();
@@ -62,7 +63,7 @@ export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={})
   next();
  });
  app.use('/api/cube',cubeRouter(cubeStore,{
-  canPublish:(meta,email)=>{const h=meta.deviceKey&&store.householdOfDevice(meta.deviceKey);return !h||h.members.includes((email||'').toLowerCase())},
+  canPublish:(meta,email)=>{const h=meta.deviceKey&&store.householdOfDevice(meta.deviceKey);return !h||h.members.includes((email||'').toLowerCase())||canPublishTeamDevice(meta.deviceKey,email)},
   onLive:(readings,cube)=>{service.onLive(readings,cube);onLive?.(readings,cube)},
   onHistory:(slots,cube)=>{service.onHistory(slots,cube);onHistory?.(slots,cube)},
  }));
