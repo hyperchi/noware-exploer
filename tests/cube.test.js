@@ -65,3 +65,73 @@ test('gateway publishes with a bearer token and nothing else',async()=>{
   assert.ok(owned.status===200||owned.status===409);
  }finally{await new Promise(r=>server.close(r));delete process.env.SESSION_SECRET;delete process.env.GATEWAY_TOKENS;}
 });
+
+for (const gateway of [false,true]) {
+ test(`all NOSO accounts share the relay from a ${gateway?'gateway':'browser'} publisher`,async(t)=>{
+  const previous={...process.env};
+  process.env.SESSION_SECRET='team-relay-test-secret'.repeat(4);
+  process.env.NOWARE_DEMO='0';
+  const gatewayToken='team-relay-gateway-test-token-0123456789';
+  const privateToken='private-relay-gateway-test-token-0123456789';
+  process.env.GATEWAY_TOKENS=`${gatewayToken}:publisher@noso.so,${privateToken}`;
+  t.mock.timers.enable({apis:['Date'],now:1793386800000});
+  const app=createApp();
+  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+  const base='http://127.0.0.1:'+server.address().port;
+  const cookies=new Map();
+  for(const email of ['publisher@noso.so','winston@noso.so','info@noso.so','new-teammate@noso.so','shanshan0343@gmail.com']) {
+   cookies.set(email,sessionCookie(await createSession({email,sub:email},{secret:process.env.SESSION_SECRET,domain:'noso.so'})));
+  }
+  const read=email=>fetch(base+'/api/cube?me=viewer&history_version=-1',{headers:{cookie:cookies.get(email)}}).then(response=>response.json());
+  const publish=(headers,path,body)=>fetch(base+'/api/cube'+path,{method:'POST',headers:{...headers,'content-type':'application/json'},body:JSON.stringify(body)});
+  const publisherHeaders=gateway?{authorization:`Bearer ${gatewayToken}`}:{cookie:cookies.get('publisher@noso.so')};
+  const sentAt=Date.now()/1000;
+  const publication={publisher:'office-publisher',sentAt,readings:[{timestamp:sentAt,temperatureC:22,humidity:45,etvoc:30}],meta:{name:'Shared office cube'}};
+  try {
+   assert.equal((await read('winston@noso.so')).active,false);
+   assert.equal((await publish(publisherHeaders,'/live',publication)).status,200);
+   assert.equal((await publish(publisherHeaders,'/history',{publisher:publication.publisher,sentAt,slots:[{sequence:1,timestamp:sentAt-300,co2Avg:500}]})).status,200);
+   for(const email of ['winston@noso.so','info@noso.so','new-teammate@noso.so']) {
+    const shared=await read(email);
+    assert.equal(shared.active,true);
+    assert.equal(shared.publisher,'publisher@noso.so');
+    assert.equal(shared.yours,false);
+    assert.equal(shared.live[0].etvoc,30);
+    assert.equal(shared.slots[0].co2Avg,500);
+   }
+   assert.equal((await read('shanshan0343@gmail.com')).active,false);
+   assert.equal((await fetch(base+'/api/cube')).status,401);
+   assert.equal((await fetch(base+'/api/cube',{headers:{authorization:`Bearer ${gatewayToken}`}})).status,403);
+   // A second account cannot impersonate the active publisher by copying its public ID.
+   const teammateHeaders={cookie:cookies.get('new-teammate@noso.so')};
+   assert.equal((await publish(teammateHeaders,'/live',publication)).status,409);
+   assert.equal((await publish(teammateHeaders,'/history',{publisher:publication.publisher,sentAt,slots:[]})).status,409);
+   assert.equal((await read('info@noso.so')).slots.length,1);
+   // Private publishers cannot replace or leak into the team stream.
+   const privatePublication={...publication,meta:{name:'Private cube'},readings:[{timestamp:sentAt,etvoc:999}]};
+   assert.equal((await publish({cookie:cookies.get('shanshan0343@gmail.com')},'/live',privatePublication)).status,200);
+   assert.equal((await publish({authorization:`Bearer ${privateToken}`},'/live',privatePublication)).status,200);
+   assert.equal((await read('info@noso.so')).live[0].etvoc,30);
+   assert.equal((await read('shanshan0343@gmail.com')).live[0].etvoc,999);
+   // Any NOSO account may become the next publisher once the existing lease expires.
+   t.mock.timers.tick(31000);
+   const nextSentAt=Date.now()/1000;
+   assert.equal((await publish(teammateHeaders,'/live',{...publication,publisher:'next-publisher',sentAt:nextSentAt,readings:[{timestamp:nextSentAt,etvoc:42}],meta:{name:'Next team cube'}})).status,200);
+   for(const email of ['publisher@noso.so','winston@noso.so','info@noso.so']) {
+    const shared=await read(email);
+    assert.equal(shared.publisher,'new-teammate@noso.so');
+    assert.equal(shared.meta.name,'Next team cube');
+    assert.equal(shared.live.length,1);
+    assert.equal(shared.live[0].etvoc,42);
+    assert.equal(shared.slots.length,0);
+   }
+   assert.equal((await read('shanshan0343@gmail.com')).meta.name,'Private cube');
+  } finally {
+   app.locals.homeService.stopAll();
+   await new Promise(resolve=>server.close(resolve));
+   for(const key of ['SESSION_SECRET','NOWARE_DEMO','GATEWAY_TOKENS']) {
+    if(previous[key]===undefined) delete process.env[key]; else process.env[key]=previous[key];
+   }
+  }
+ });
+}

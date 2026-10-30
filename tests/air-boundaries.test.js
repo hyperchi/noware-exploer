@@ -47,7 +47,7 @@ test('production cannot enable demo seeds through an environment override', () =
   assert.equal(demoEnabled({ NODE_ENV: 'production', NOWARE_DEMO: '1' }), false);
 });
 
-test('relay isolates owners; device keys cannot steal a home; providers require consent and staff authorization', async () => {
+test('team relay preserves household boundaries; device keys cannot steal a home; providers require consent and staff authorization', async () => {
   process.env.SESSION_SECRET = 'boundary-test-secret'.repeat(4);
   process.env.NOWARE_DEMO = '0';
   process.env.ADMIN_EMAILS = 'admin@noso.so';
@@ -68,7 +68,7 @@ test('relay isolates owners; device keys cannot steal a home; providers require 
     const t = Date.now() / 1000;
     const body = { publisher: 'publisher-owner', sentAt: t, readings: [reading(t)], meta: { deviceKey: 'physical-unique', roomName: 'Office' } };
     assert.equal((await owner('POST', '/api/cube/live', body)).status, 200);
-    assert.equal((await other('GET', '/api/cube')).body.active, false);
+    assert.equal((await other('GET', '/api/cube')).body.active, true);
     assert.equal((await other('POST', '/api/cube/live', body)).status, 403);
     const hid = store.householdsForMember('owner@noso.so')[0].id;
     assert.equal((await other('GET', `/api/home/households/${hid}/report`)).status, 403);
@@ -80,7 +80,7 @@ test('relay isolates owners; device keys cannot steal a home; providers require 
     await owner('PATCH', `/api/home/households/${hid}`, { shareInsights: true });
     assert.equal((await tech('GET', `/api/contractor/customers/${hid}`)).status, 200);
     assert.equal((await techB('GET', `/api/contractor/customers/${hid}`)).status, 403);
-    assert.equal((await tech('GET', '/api/cube')).body.active, false);
+    assert.equal((await tech('GET', '/api/cube')).body.active, true);
     assert.equal((await tech('GET', `/api/home/households/${hid}/rooms/${store.getHousehold(hid).rooms[0].id}/series`)).status, 403);
     await owner('PATCH', `/api/home/households/${hid}`, { shareInsights: false });
     assert.equal((await tech('GET', `/api/contractor/customers/${hid}`)).status, 403);

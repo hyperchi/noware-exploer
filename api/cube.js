@@ -12,7 +12,9 @@
 // events, baselines and contractor insights are derived.
 import express from 'express';
 import {createHash} from 'node:crypto';
+import {ALLOWED_DOMAIN} from '../lib/auth-policy.js';
 
+const TEAM_RELAY_KEY = `team:${ALLOWED_DOMAIN}`;
 const LIVE_WINDOW_S = 3600;
 const ONLINE_WINDOW_S = 20;
 // A publisher that has gone quiet this long can be replaced by another machine.
@@ -111,15 +113,15 @@ export function cubeRouter(initialStore = createCubeStore(), {onLive, onHistory,
     next();
   });
 
-  // The old relay was global. Scope every read and publisher lease to its
-  // authenticated owner; publisher ids and device keys are never credentials.
+  // Verified NOSO identities share one relay; guests and unowned gateways stay isolated.
   const stores = new Map();
   router.use((req, res, next) => {
     if (req.gateway && req.method !== 'POST') return res.status(403).json({error: 'Publish-only credential.'});
     const owner = req.gateway ? req.gateway.owner || `gateway:${createHash('sha256').update(req.gateway.token).digest('hex')}` : req.session?.email?.toLowerCase();
     if (!owner) return res.status(401).json({error: 'Sign in required.'});
-    if (!stores.has(owner)) stores.set(owner, stores.size ? createCubeStore() : initialStore);
-    req.cubeStore = stores.get(owner);
+    const relayKey = owner.endsWith(`@${ALLOWED_DOMAIN}`) ? TEAM_RELAY_KEY : owner;
+    if (!stores.has(relayKey)) stores.set(relayKey, stores.size ? createCubeStore() : initialStore);
+    req.cubeStore = stores.get(relayKey);
     next();
   });
 
@@ -143,16 +145,18 @@ export function cubeRouter(initialStore = createCubeStore(), {onLive, onHistory,
       res.status(403).json({error: 'Device belongs to another household.'});
       return null;
     }
+    const publisherEmail = gateway ? gateway.email : req.session.email;
     const current = store.publisher;
-    if (current && current.id !== publisher && now() - current.lastSeen < PUBLISHER_TIMEOUT_S) {
+    const samePublisher = current?.id === publisher && current.email === publisherEmail;
+    if (current && !samePublisher && now() - current.lastSeen < PUBLISHER_TIMEOUT_S) {
       res.status(409).json({error: 'Another machine is already sharing a cube.', publisher: current.email});
       return null;
     }
-    if (!current || current.id !== publisher) {
+    if (!samePublisher) {
       // A new source: its history and timeline replace the previous one's.
       Object.assign(store, createCubeStore(), {historyVersion: store.historyVersion + 1});
     }
-    store.publisher = {id: publisher, email: gateway ? gateway.email : (req.session?.email || ''), kind: gateway ? 'gateway' : 'browser', lastSeen: now()};
+    store.publisher = {id: publisher, email: publisherEmail, kind: gateway ? 'gateway' : 'browser', lastSeen: now()};
     // Timestamps come from the publisher's clock; shift them onto the server's.
     return now() - sentAt;
   }
