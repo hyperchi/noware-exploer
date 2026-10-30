@@ -361,3 +361,6 @@ body:has(.route.active .simple-air) { background: #f8f9f7; }
 }
 @media (max-width: 350px) { .simple-header .spacer { display: none; } .simple-switch { order: 3; width: 100%; } .simple-settings-link { margin-left: auto; } .simple-hero h1 { font-size: 33px; } .chemical-panel { padding: 20px; } }
 @media (prefers-reduced-motion: reduce) { .settings-chevron { transition: none; } }
+
+.simple-event-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.simple-all-events .simple-technical { margin-top: 8px; min-height: 18px; }

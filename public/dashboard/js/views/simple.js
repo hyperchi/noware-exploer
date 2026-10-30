@@ -7,9 +7,11 @@ import { agoText, clockText, recommendationCard, contractorCard, timelineList, e
 import { OBSERVATION_TYPES } from '../intelligence/source-patterns.js';
 import { measurementIsLive } from '../intelligence/live-measurements.js';
 import { simpleIcon, readingParts } from '../simple-icons.js';
+import { HistoryChart } from '../charts.js';
 
 const NAMES = { pm25: 'Fine particles', co2: 'Fresh air', eco2: 'Fresh-air estimate', tvoc: 'Chemicals & odors', hum: 'Humidity', temp: 'Temperature' };
 const MEANINGS = { pm25: 'Tiny particles from things like cooking, dust or smoke.', co2: 'Carbon dioxide helps show when a room needs more fresh air.', eco2: 'An estimate from the gas sensor. It also reacts to odors.', tvoc: 'An estimate of gases from products, cooking and other sources.', hum: 'How much moisture is in the air.', temp: 'How warm or cool this room is.' };
+const GRAPH = { pm25: { unit: 'µg/m³', color: '--m-pm', decimals: 1 }, tvoc: { unit: 'ppb', color: '--m-voc', decimals: 0 }, co2: { unit: 'ppm', color: '--m-co2', decimals: 0 } };
 const readingAge = age => age == null ? 'not available' : age < 1 ? 'just now' : age < 60 ? `${Math.floor(age)} sec ago` : agoText(age);
 
 export class SimpleView {
@@ -19,6 +21,8 @@ export class SimpleView {
     this.headerRooms = h('div.simple-selectors');
     this.body = h('div.simple-body');
     this.expanded = new Set();
+    this.eventsHost = h('div.simple-all-events');
+    this.eventHistory = { key: '', at: 0, pending: false };
     this.lastRenderedReadings = new Map();
     this.el = h('main.simple-air',
       h('header.simple-header', h('a.simple-brand', { href: '#/', text: 'Noware', 'aria-label': 'Noware original dashboard' }),
@@ -86,12 +90,61 @@ export class SimpleView {
       patterns?.associations.length ? h('div.simple-associations', ...patterns.associations.map(a => h('div', h('strong', { text: `${a.label} · ${a.recurring ? 'Repeated timing match' : 'Still learning'}` }), h('p', { text: a.text })))) : null,
       patterns?.recentObservations.length ? this.disclosure('notes', 'Your activity notes', h('ul.simple-notes', ...patterns.recentObservations.map(o => h('li', h('div', h('strong', { text: o.label }), h('span', { text: `You recorded · ${new Date(o.occurredAt * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${clockText(o.occurredAt)}` }), o.note ? h('p', { text: o.note }) : null), !canEdit ? null : h('button.simple-link', { type: 'button', text: 'Remove', 'aria-label': `Remove ${o.label} note`, 'data-focus': `remove-${o.id}`, onclick: async () => { try { await homeApi.removeObservation(f.householdId, o.id); await f.refresh(); } catch (e) { toast(e.message, 'err'); } } }))))) : null,
     );
-    const story = h('section.simple-section.simple-events', this.sectionHead('Recent air events', 'The changes that shaped your day.', h('a.simple-link', { href: roomHref, text: 'View room history →' })), h('div.simple-event-list', timelineList(room.timeline?.slice(-6), { empty: online ? 'No air events recorded in the last 24 hours.' : 'No recent air events recorded. Live readings are unavailable.' })));
+    const story = h('section.simple-section.simple-events', this.sectionHead('Recent air events', 'The changes that shaped your day.', h('a.simple-link', { href: roomHref, text: 'View room history →' })), h('div.simple-event-list', timelineList(room.timeline?.slice(-6), { empty: online ? 'No air events recorded today.' : 'No air events recorded today. Live readings are unavailable.' }), this.allEvents(room)));
     const provider = f.household?.contractor;
     const help = provider ? contractorCard(provider, { onContact: type => this.contact(room, type), onReport: () => this.contact(room, 'share_air_report') }) : h('section.simple-help', h('div', h('h2', { text: 'A little help, when you need it.' }), h('p', { text: 'Connect your home comfort provider to ask about recurring air problems.' })), h('a.simple-link', { href: '#/settings', text: 'Connect a provider →' }));
-    fill(this.body, hero, story, recovery, aqiPanel(room, f, canEdit ? () => openLocationPicker(f) : null), metrics, cause, clues, canEdit ? help : null);
+    fill(this.body, hero, story, recovery, aqiPanel(room, f, canEdit || f.me?.households?.some(hh => hh.id === f.householdId && hh.shared) ? () => openLocationPicker(f) : null), metrics, cause, clues, canEdit ? help : null);
     this.body.querySelectorAll('details[data-key]').forEach(d => { d.open = this.expanded.has(d.dataset.key); });
     if (focusKey) this.el.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`)?.focus({ preventScroll: true });
+  }
+
+  /* Event history is only the graph: the readings with each event marked on them. */
+  allEvents(room) {
+    const details = this.disclosure('all-events', 'See events on a graph · last 7 days', this.eventsHost);
+    details.addEventListener('toggle', () => { if (details.open) this.loadEvents(room); });
+    if (this.expanded.has('all-events')) this.loadEvents(room);
+    return details;
+  }
+
+  loadEvents(room) {
+    const state = this.eventHistory, key = `${this.feed.householdId}/${room.roomId}`;
+    if (state.pending || (state.key === key && Date.now() - state.at < 60000)) return;
+    state.pending = true;
+    homeApi.series(this.feed.householdId, room.roomId, 7 * 86400)
+      .then(series => {
+        if (state.key !== key) state.channel = series.events?.at(-1)?.channel;
+        state.series = series;
+        this.drawEvents();
+      })
+      .catch(err => fill(this.eventsHost, h('p', { text: err.message })))
+      .finally(() => { state.pending = false; state.key = key; state.at = Date.now(); });
+  }
+
+  drawEvents() {
+    const state = this.eventHistory, series = state.series;
+    const channels = Object.keys(GRAPH).filter(c => series.channels[c]?.length);
+    if (!channels.includes(state.channel)) state.channel = channels[0];
+    if (!state.chartHost) {
+      state.chartHost = h('div.chart-host');
+      state.readout = h('div.simple-technical');
+      state.picker = h('div.simple-event-picker');
+      fill(this.eventsHost, state.picker, state.chartHost, state.readout);
+      state.chart = new HistoryChart(state.chartHost, point => this.eventReadout(point));
+    }
+    const graph = GRAPH[state.channel];
+    if (!graph) { fill(state.readout, 'No readings in the last 7 days.'); return; }
+    fill(state.picker, ...channels.map(c => h(`button.simple-button${c === state.channel ? '.primary' : ''}`, { type: 'button', text: NAMES[c], 'aria-pressed': String(c === state.channel), onclick: () => { state.channel = c; this.drawEvents(); } })));
+    state.chart.setEvents((series.events || []).map(e => ({ ...e, color: GRAPH[e.channel]?.color || '--m-voc', label: e.headline || `${NAMES[e.channel] || 'Air'} changed` })));
+    state.chart.setData([series.channels[state.channel]], graph.color, v => `${v.toFixed(graph.decimals)} ${graph.unit}`, [series.from, series.to], []);
+    this.eventReadout(null);
+  }
+
+  eventReadout(point) {
+    const { series, readout, channel } = this.eventHistory, count = series.events?.length || 0;
+    if (!point) { readout.textContent = count ? `${count} ${count === 1 ? 'event' : 'events'} marked. Hover the graph to read them.` : 'No events in the last 7 days.'; return; }
+    const graph = GRAPH[channel], event = series.events?.find(e => point.time >= e.startedAt && point.time <= (e.endedAt || Infinity));
+    const when = new Date(point.time * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    readout.textContent = `${point.value.toFixed(graph.decimals)} ${graph.unit} · ${when}${event ? ` · ${event.headline || `${NAMES[event.channel] || 'Air'} changed`}` : ''}`;
   }
 
   sectionHead(title, subtitle, action) {

@@ -38,7 +38,7 @@ export function homeRouter({ store, service, env = process.env }) {
     req.isTeamViewer = isTeamViewer(req.principal, h.id);
     next();
   };
-  // Contractors stay out of raw series; members and the team may read them.
+  // Members and the team only: contractors get neither raw series nor the location control.
   const loadSeriesReader = (req, res, next) => loadHousehold()(req, res, () => (req.isMember || req.isTeamViewer ? next() : res.status(403).json({ error: 'Not allowed for this household.' })));
 
   router.get('/me', (req, res) => {
@@ -69,7 +69,7 @@ export function homeRouter({ store, service, env = process.env }) {
     catch { res.status(503).json({ error: 'City search is temporarily unavailable.' }); }
   });
 
-  router.put('/households/:id/location', loadHousehold(true), (req, res) => {
+  router.put('/households/:id/location', loadSeriesReader, (req, res) => {
     if (req.body?.enabled === false) {
       store.upsertHousehold({ ...req.household, location: null });
       for (const engine of service.engines.values()) if (engine.householdId === req.household.id) engine.outdoor = unavailableOutdoor();
