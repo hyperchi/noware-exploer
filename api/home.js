@@ -12,9 +12,8 @@ import { demoEnabled, seedDemo, DEMO_HOUSEHOLD_ID } from '../lib/demo-seed.js';
 
 const str = (v, max = 80) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
-export function homeRouter({ store, service, env = process.env }) {
+export function homeRouter({ store, service, env = process.env, cameras = new CameraDirectory() }) {
   const router = express.Router();
-  const cameras = new CameraDirectory();
   router.use(express.json({ limit: '64kb' }));
   router.use((req, res, next) => {
     res.setHeader('Cache-Control', 'private, no-store');
@@ -169,6 +168,11 @@ export function homeRouter({ store, service, env = process.env }) {
     const office = req.household.deviceKeys.some((k) => teamDeviceKeys(env).includes(k));
     try { const list = await cameras.near(area, { prefer: office ? TEAM_OFFICE_CAMERAS : [] }); res.json({ cameras: list, checkedAt: cameras.checkedAt }); }
     catch { res.status(503).json({ error: 'Cameras are temporarily unavailable.' }); }
+  });
+
+  router.get('/households/:id/cameras/:cameraId/updated', loadSeriesReader, async (req, res) => {
+    try { res.json({ updatedAt: await cameras.imageUpdatedAt(req.params.cameraId) }); }
+    catch { res.json({ updatedAt: null }); }
   });
 
   router.get('/households/:id/rooms/:roomId/series', loadSeriesReader, (req, res) => {
