@@ -185,3 +185,27 @@ test('camera checks need new segments, retry once, hide failures, and distrust a
     assert.equal((await dir.near(area)).length, 2);
   } finally { console.log = log; }
 });
+
+test('the scheduled camera check needs its token, and snapshot times come from Caltrans', async () => {
+  const { CameraDirectory } = await import('../lib/cameras.js');
+  const data = { data: [{ cctv: { inService: 'true', location: { locationName: 'A -- A', latitude: '37.8', longitude: '-122.4' }, imageData: { streamingVideoURL: 'https://x.test/a.m3u8', static: { currentImageURL: 'https://x.test/a.jpg' } } } }] };
+  const fetchImpl = async (url, o = {}) => o.method === 'HEAD' ? new Response(null, { headers: { 'last-modified': 'Fri, 30 Oct 2026 23:33:07 GMT' } }) : Response.json(data);
+  const dir = new CameraDirectory({ fetchImpl });
+  assert.equal(await dir.imageUpdatedAt('A'), Date.UTC(2026, 9, 30, 23, 33, 7) / 1000);
+  assert.equal(await dir.imageUpdatedAt('https://evil.test/'), null);
+
+  const store = createHomeStore({ env: {} });
+  const app = createApp({ homeStore: store, homeService: new HomeService({ store }) });
+  const server = app.listen(0, '127.0.0.1'); await new Promise(r => server.once('listening', r));
+  const url = `http://127.0.0.1:${server.address().port}/api/internal/camera-check`;
+  try {
+    delete process.env.CAMERA_CHECK_TOKEN;
+    assert.equal((await fetch(url, { method: 'POST', headers: { authorization: 'Bearer x' } })).status, 401);
+    process.env.CAMERA_CHECK_TOKEN = 'right-token';
+    assert.equal((await fetch(url, { method: 'POST', headers: { authorization: 'Bearer wrong' } })).status, 401);
+    assert.equal((await fetch(url, { method: 'POST' })).status, 401);
+    const ok = await fetch(url, { method: 'POST', headers: { authorization: 'Bearer right-token' } });
+    assert.equal(ok.status, 200);
+    assert.deepEqual(await ok.json(), { checked: 0, failing: [] });
+  } finally { delete process.env.CAMERA_CHECK_TOKEN; server.close(); }
+});

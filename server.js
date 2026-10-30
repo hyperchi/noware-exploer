@@ -13,7 +13,10 @@ import {HomeService} from './lib/home-service.js';
 import {demoEnabled,seedDemo} from './lib/demo-seed.js';
 import {readSession,getCookie,SESSION_COOKIE,createSession,sessionCookie} from './lib/session.js';
 import {ALLOWED_DOMAIN} from './lib/auth-policy.js';
-import {canPublishTeamDevice} from './lib/authz.js';
+import {canPublishTeamDevice,teamDeviceKeys} from './lib/authz.js';
+import {CameraDirectory} from './lib/cameras.js';
+import {coarseLocation} from './lib/outdoor-provider.js';
+import {createHash,timingSafeEqual} from 'node:crypto';
 
 export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={}){
  const app=express();
@@ -25,6 +28,7 @@ export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={})
  app.locals.homeStore=store;app.locals.homeService=service;
  // Outside production, a first-time publisher joins the seeded demo home instead of getting a bare one.
  if(!service.beforeCreateHousehold)service.beforeCreateHousehold=email=>{if(demoEnabled())seedDemo({store,service,userEmail:email,timeZone:process.env.NOWARE_TIMEZONE||'America/Los_Angeles'})};
+ const cameras=new CameraDirectory();
  const dist=fileURLToPath(new URL('./dist/',import.meta.url));
  app.disable('x-powered-by');
  app.use((req,res,next)=>{res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');res.setHeader('Cross-Origin-Opener-Policy','same-origin-allow-popups');next()});
@@ -52,6 +56,18 @@ export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={})
  app.get('/login', (req,res)=>res.sendFile(path.join(dist,'login.html')));
  app.get('/login.html', (req,res)=>res.redirect(308,'/login'));
  for(const file of ['login.js','favicon.ico'])app.get('/'+file,(req,res)=>res.sendFile(path.join(dist,file)));
+ // Cloud Scheduler runs the camera check with its own token; absent the token, the route does not exist.
+ const sha=v=>createHash('sha256').update(v).digest();
+ app.post('/api/internal/camera-check',async(req,res,next)=>{
+  const token=process.env.CAMERA_CHECK_TOKEN;
+  if(!token)return next();
+  if(!timingSafeEqual(sha(req.get('authorization')||''),sha('Bearer '+token)))return res.status(401).json({error:'Not allowed.'});
+  const areas=teamDeviceKeys().map(k=>store.householdOfDevice(k)).map(h=>coarseLocation(h?.location)).filter(Boolean);
+  try{
+   const results=areas[0]?await cameras.scheduledCheck(areas[0]):null;
+   res.json({checked:results?.length||0,failing:(results||[]).filter(r=>!r.ok).map(r=>({name:r.name,reason:r.reason}))});
+  }catch(err){res.status(503).json({error:err.message})}
+ });
  // Headless publishers (gateway/) authenticate with a bearer token from
  // GATEWAY_TOKENS; they may only reach the cube relay, never pages or files.
  app.use('/api/cube',(req,res,next)=>{const gateway=gatewayPrincipal(req);if(gateway){req.gateway=gateway;req.session={email:gateway.email,gateway:true};}next()});
@@ -67,7 +83,7 @@ export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={})
   onLive:(readings,cube)=>{service.onLive(readings,cube);onLive?.(readings,cube)},
   onHistory:(slots,cube)=>{service.onHistory(slots,cube);onHistory?.(slots,cube)},
  }));
- app.use('/api/home',homeRouter({store,service}));
+ app.use('/api/home',homeRouter({store,service,cameras}));
  app.use('/api/contractor',contractorRouter({store,service}));
  app.use(express.static(dist,{dotfiles:'deny',etag:false,lastModified:false,setHeaders:res=>res.setHeader('Cache-Control','private, no-store')}));
  app.use((req,res)=>res.status(404).send('Not found'));
