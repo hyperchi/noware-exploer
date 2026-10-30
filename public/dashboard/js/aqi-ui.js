@@ -17,7 +17,7 @@ export function aqiPanel(room, feed, onLocation) {
         h('div.aqi-category', h('span.aqi-status-dot', { 'aria-hidden': 'true' }), ready ? result.label : outside && !area && onLocation ? 'Choose your area' : 'Not available yet')),
       h('p.aqi-metric', { text: 'US AQI · PM2.5 · NowCast estimate' }),
       ready ? h('p', { text: `PM2.5 weighted average: ${result.pm25.toFixed(1)} µg/m³` }) : h('p', { text: result.reason }),
-      h('p.aqi-origin', { text: outside ? 'Regional outdoor model · Open-Meteo / CAMS' : room.deviceHealth.simulated ? 'Simulated readings · not your AirCube' : 'Measured by your AirCube · AQI calculated' }),
+      h('p.aqi-origin', { text: outside ? (ready && result.provider?.startsWith('US EPA') ? `${result.provider} · preliminary data` : 'Regional outdoor model · Open-Meteo / CAMS') : room.deviceHealth.simulated ? 'Simulated readings · not your AirCube' : 'Measured by your AirCube · AQI calculated' }),
       ready ? h('p.aqi-time', { text: `${result.hoursUsed} hourly values · through ${new Date(result.through * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` }) : null,
     );
   };
@@ -29,11 +29,11 @@ export function aqiPanel(room, feed, onLocation) {
     h('details.simple-disclosure', { 'data-key': 'aqi-method' }, h('summary', { text: 'How these AQI numbers compare', 'data-focus': 'aqi-method' }),
       h('p', { text: comparison.note }),
       h('p', { text: 'Both use the US EPA PM2.5 breakpoints updated in 2024, the same completed-hour window, and the same weighting rules. The AirCube’s VOC index is not used. Current sensor values below may change faster than this hourly index.' }),
-      h('p', { text: 'Apple Weather may show a different value because its provider, pollutant coverage and update time can differ. Our comparison covers fine particles on both sides. The outdoor model represents an area, not a monitor directly outside your window.' }),
+      h('p', { text: 'Apple Weather may show a different value because its provider, pollutant coverage and update time can differ. Our comparison covers fine particles on both sides. Outdoor values represent the nearest monitor or a regional model, not the air directly outside your window.' }),
       h('p', { text: 'AQI is not an allergy score. Low particle levels cannot establish that pet allergens are absent.' }),
       h('div.aqi-attribution', h('a', { href: 'https://aqs.epa.gov/aqsweb/documents/codetables/aqi_breakpoints.html', target: '_blank', rel: 'noopener noreferrer', text: 'EPA scale' }), ' · ',
         h('a', { href: 'https://forum.airnowtech.org/t/the-nowcast-for-pm2-5-and-pm10/172', target: '_blank', rel: 'noopener noreferrer', text: 'NowCast method' }), ' · ',
-        h('a', { href: 'https://open-meteo.com/en/docs/air-quality-api', target: '_blank', rel: 'noopener noreferrer', text: 'Open-Meteo / CAMS data' }))),
+        h('a', { href: 'https://open-meteo.com/en/docs/air-quality-api', target: '_blank', rel: 'noopener noreferrer', text: 'Open-Meteo / CAMS data' }), ' · ', h('a', { href: 'https://www.airnow.gov/', target: '_blank', rel: 'noopener noreferrer', text: 'EPA AirNow data' }))),
   );
 }
 
@@ -73,8 +73,8 @@ export function openLocationPicker(feed) {
   const remove = feed.household?.household?.location ? h('button.simple-button', { type: 'button', text: 'Stop using location', onclick: async () => {
     try { await homeApi.setLocation(feed.householdId, { enabled: false }); await feed.reloadHousehold(); close(); } catch (e) { message.textContent = e.message; }
   } }) : null;
-  body.append(h('p', { text: 'Use this home’s area for outdoor air quality. Browser location is rounded to about 10 km before it is stored or sent to Open-Meteo. No background location tracking.' }), locate, form, message, results,
-    h('p.aqi-location-credit', 'City search: Open-Meteo / GeoNames. Outdoor air: CAMS via Open-Meteo.'),
+  body.append(h('p', { text: 'Use this home’s area for outdoor air quality. Browser location is rounded to about 10 km before it is stored or used to look up outdoor air. No background location tracking.' }), locate, form, message, results,
+    h('p.aqi-location-credit', 'Area search: Zippopotam.us, Open-Meteo / GeoNames. Outdoor air: EPA AirNow or CAMS via Open-Meteo.'),
     h('div.simple-note-actions', remove, h('button.simple-button', { type: 'button', text: 'Cancel', onclick: close })));
   locate.focus();
   modal.addEventListener('keydown', e => {
