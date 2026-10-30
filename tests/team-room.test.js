@@ -96,6 +96,11 @@ test('a Noso browser publishing without a device key feeds the shared office roo
     assert.equal((await publisher('POST', '/api/cube/live', { publisher: 'browser-publisher', sentAt: t, readings: [reading(t)], meta: { name: 'Noware' } })).status, 200);
     const office = store.householdOfDevice('aircube-office');
     assert.equal(office.name, 'Noso Office');
+    assert.equal(office.location.label, 'San Francisco, California, United States');
+    store.upsertHousehold({ ...office, location: null });
+    assert.equal((await publisher('POST', '/api/cube/live', { publisher: 'browser-publisher', sentAt: t + 1, readings: [reading(t + 1)], meta: { name: 'Noware' } })).status, 200);
+    assert.equal(store.householdOfDevice('aircube-office').location, null);
+    store.upsertHousehold({ ...store.householdOfDevice('aircube-office'), location: { ...office.location } });
     const me = await (await teammate('GET', '/api/home/me')).json();
     assert.deepEqual(me.households.map(h => [h.id, h.shared]), [[office.id, true]]);
     assert.equal((await teammate('GET', `/api/home/households/${office.id}/summary`)).status, 200);
