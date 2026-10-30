@@ -176,6 +176,18 @@ export class AirGauge {
 
 // -------------------------------------------------------------- history chart
 
+const clockTick = (d) => { const hour = d.getHours() % 12 || 12, minute = d.getMinutes(); return `${hour}${minute ? `:${String(minute).padStart(2, "0")}` : ""}${d.getHours() < 12 ? "am" : "pm"}`; };
+
+/** Time ticks, with "Wed 10/28" under the first tick of each day. */
+function dayTickLabels(u, ticks) {
+  let lastDay = "";
+  return ticks.map((t) => {
+    const d = new Date(t * 1000), day = d.toDateString(), first = day !== lastDay;
+    lastDay = day;
+    return first ? `${clockTick(d)}\n${d.toLocaleDateString([], { weekday: "short" })} ${d.getMonth() + 1}/${d.getDate()}` : clockTick(d);
+  });
+}
+
 export class HistoryChart {
   /**
    * @param {HTMLElement} host container the chart fills
@@ -324,6 +336,8 @@ export class HistoryChart {
           font,
           grid: { stroke: grid, width: 1 },
           ticks: { stroke: grid, width: 1, size: 4 },
+          size: 58,
+          values: dayTickLabels,
         },
         {
           stroke: axisText,
