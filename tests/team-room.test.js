@@ -120,3 +120,23 @@ test('a US ZIP code finds an area without an Open-Meteo key, and city search exp
   await assert.rejects(provider.searchLocations('San Francisco'), /ZIP code/);
   assert.equal(urls.length, 2);
 });
+
+test('without an Open-Meteo key, production uses the nearest AirNow monitor', async () => {
+  const now = Date.UTC(2026, 9, 30, 22, 30) / 1000;
+  const sites = ['840060750005|PM2.5|0005|Far Away|Active|||R9|40.0|-120.0|', '060750005|PM2.5|0005|San Francisco|Active|||R9|37.7658|-122.3978|', '060010011|PM2.5|0011|Oakland West|Active|||R9|37.8148|-122.2823|'].join('\n');
+  const fetchImpl = async url => {
+    const u = String(url);
+    if (u.endsWith('monitoring_site_locations.dat')) return new Response(sites);
+    const hour = u.match(/_(\d{10})\.dat$/)[1];
+    if (hour === '2026103021') return new Response('', { status: 404 });
+    return new Response(`10/30/26|20:00|060750005|San Francisco|-8|PM2.5|UG/M3|4|BAAD\n10/30/26|20:00|060010011|Oakland West|-8|PM2.5|UG/M3|7|BAAD\n10/30/26|20:00|060750005|San Francisco|-8|OZONE|PPB|23|BAAD`);
+  };
+  const provider = new OpenMeteoOutdoorProvider({ production: true, apiKey: '', fetchImpl, clock: () => now });
+  const outdoor = await provider.getOutdoor({ location: { latitude: 37.8, longitude: -122.4, enabled: true } });
+  assert.equal(outdoor.status, 'available');
+  assert.match(outdoor.provider, /San Francisco monitor/);
+  assert.equal(outdoor.pm25, 4);
+  assert.equal(outdoor.hourlyPm25.length, 11);
+  const nowhere = await provider.getOutdoor({ location: { latitude: 10, longitude: 10, enabled: true } });
+  assert.equal(nowhere.status, 'unavailable');
+});

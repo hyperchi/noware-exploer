@@ -102,7 +102,7 @@ test('cloud snapshots reload on restart and reject concurrent writers without ov
     if (!saved) return new Response('', { status: 404 });
     return new URL(url).searchParams.has('alt') ? new Response(saved) : Response.json({ generation: String(generation) });
   };
-  const args = { bucket: 'test-private', fetchImpl, tokenProvider: async () => 'test-token' };
+  const args = { bucket: 'test-private', fetchImpl, tokenProvider: async () => 'test-token', takeoverWindowMs: 0 };
   const store = new CloudHomeStore(args); await store.ready;
   store.upsertHousehold({ id: 'home', name: 'Persisted', members: ['owner@noso.so'] });
   await store.flush();
@@ -111,6 +111,13 @@ test('cloud snapshots reload on restart and reject concurrent writers without ov
   await store.flush();
   await assert.rejects(restored.flush(), /Concurrent store writer/);
   clearTimeout(store._timer); clearTimeout(restored._timer);
+  // A rollout: the old revision writes after the new one has loaded, and the new one recovers.
+  const incoming = new CloudHomeStore({ ...args, takeoverWindowMs: 60000 }); await incoming.ready;
+  await store.ready; store.generation = String(generation); await store.flush();
+  incoming.upsertHousehold({ id: 'home', name: 'Newest', members: ['owner@noso.so'] });
+  await incoming.flush();
+  assert.equal(JSON.parse(saved).households.home.name, 'Newest');
+  clearTimeout(store._timer); clearTimeout(incoming._timer);
 });
 
 test('live numbers use the latest sample while inference smoothing uses recent live spacing', () => {
