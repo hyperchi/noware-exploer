@@ -8,6 +8,7 @@ import { OBSERVATION_TYPES } from '../intelligence/source-patterns.js';
 import { measurementIsLive } from '../intelligence/live-measurements.js';
 import { simpleIcon, readingParts } from '../simple-icons.js';
 import { HistoryChart } from '../charts.js';
+import { OutsideCamera } from '../outside-camera.js';
 
 const NAMES = { pm25: 'Fine particles', co2: 'Fresh air', eco2: 'Fresh-air estimate', tvoc: 'Chemicals & odors', hum: 'Humidity', temp: 'Temperature' };
 const MEANINGS = { pm25: 'Tiny particles from things like cooking, dust or smoke.', co2: 'Carbon dioxide helps show when a room needs more fresh air.', eco2: 'An estimate from the gas sensor. It also reacts to odors.', tvoc: 'An estimate of gases from products, cooking and other sources.', hum: 'How much moisture is in the air.', temp: 'How warm or cool this room is.' };
@@ -19,7 +20,11 @@ export class SimpleView {
     this.feed = feed;
     this.roomId = null;
     this.headerRooms = h('div.simple-selectors');
-    this.body = h('div.simple-body');
+    // The camera sits between two refilled parts, because moving a <video> stops it.
+    this.top = h('div.simple-part');
+    this.rest = h('div.simple-part');
+    this.camera = new OutsideCamera();
+    this.body = h('div.simple-body', this.top, this.camera.el, this.rest);
     this.expanded = new Set();
     this.eventsHost = h('div.simple-all-events');
     this.eventHistory = { key: '', at: 0, pending: false };
@@ -47,7 +52,8 @@ export class SimpleView {
       rooms.length ? h('label', 'Room', h('select', { 'data-focus': 'room', onchange: e => { this.roomId = e.target.value; this.refresh(); } }, ...rooms.map(r => h('option', { value: r.roomId, selected: r.roomId === this.roomId, text: r.roomName })))) : null,
     );
     if (!room || f.error) {
-      fill(this.body, h('section.simple-hero', h('div.simple-kicker', { text: 'YOUR HOME' }), h('h1', { text: f.error ? 'Let’s reconnect.' : f.summary || (f.me && !f.householdId) ? 'Welcome home.' : 'Checking your air…' }), h('p', { text: f.error ? 'We cannot get a current reading right now. Check your connection or open the original dashboard.' : 'Your connected AirCube will appear here. Add a home or room in Settings if needed.' }), h('a.simple-button', { href: '#/settings', text: 'Open settings' })));
+      fill(this.rest); this.camera.setHousehold(null);
+      fill(this.top, h('section.simple-hero', h('div.simple-kicker', { text: 'YOUR HOME' }), h('h1', { text: f.error ? 'Let’s reconnect.' : f.summary || (f.me && !f.householdId) ? 'Welcome home.' : 'Checking your air…' }), h('p', { text: f.error ? 'We cannot get a current reading right now. Check your connection or open the original dashboard.' : 'Your connected AirCube will appear here. Add a home or room in Settings if needed.' }), h('a.simple-button', { href: '#/settings', text: 'Open settings' })));
       return;
     }
     const now = Date.now() / 1000;
@@ -93,7 +99,9 @@ export class SimpleView {
     const story = h('section.simple-section.simple-events', this.sectionHead('Recent air events', 'The changes that shaped your day.', h('a.simple-link', { href: roomHref, text: 'View room history →' })), h('div.simple-event-list', timelineList(room.timeline?.slice(-6), { empty: online ? 'No air events recorded today.' : 'No air events recorded today. Live readings are unavailable.' }), this.allEvents(room)));
     const provider = f.household?.contractor;
     const help = provider ? contractorCard(provider, { onContact: type => this.contact(room, type), onReport: () => this.contact(room, 'share_air_report') }) : h('section.simple-help', h('div', h('h2', { text: 'A little help, when you need it.' }), h('p', { text: 'Connect your home comfort provider to ask about recurring air problems.' })), h('a.simple-link', { href: '#/settings', text: 'Connect a provider →' }));
-    fill(this.body, hero, story, recovery, aqiPanel(room, f, canEdit || f.me?.households?.some(hh => hh.id === f.householdId && hh.shared) ? () => openLocationPicker(f) : null), metrics, cause, clues, canEdit ? help : null);
+    this.camera.setHousehold(f.householdId, f.household?.household?.location);
+    fill(this.rest, metrics, cause, clues, canEdit ? help : null);
+    fill(this.top, hero, story, recovery, aqiPanel(room, f, canEdit || f.me?.households?.some(hh => hh.id === f.householdId && hh.shared) ? () => openLocationPicker(f) : null));
     this.body.querySelectorAll('details[data-key]').forEach(d => { d.open = this.expanded.has(d.dataset.key); });
     if (focusKey) this.el.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`)?.focus({ preventScroll: true });
   }

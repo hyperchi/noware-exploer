@@ -5,7 +5,8 @@ import express from 'express';
 import { unavailableOutdoor } from '../lib/air-intelligence/outdoor.js';
 import { coarseLocation } from '../lib/outdoor-provider.js';
 import { OBSERVATION_TYPES } from '../lib/air-intelligence/source-patterns.js';
-import { principalFor, canViewHousehold, canEditHousehold, contractorViewOfHousehold, isTeamViewer } from '../lib/authz.js';
+import { principalFor, canViewHousehold, canEditHousehold, contractorViewOfHousehold, isTeamViewer, teamDeviceKeys, TEAM_OFFICE_CAMERAS } from '../lib/authz.js';
+import { CameraDirectory } from '../lib/cameras.js';
 import { SCENARIOS, mergeProfile, ROOM_TYPES, EQUIPMENT_TYPES, CONTACT_ACTIONS } from '../lib/air-intelligence/index.js';
 import { demoEnabled, seedDemo, DEMO_HOUSEHOLD_ID } from '../lib/demo-seed.js';
 
@@ -13,6 +14,7 @@ const str = (v, max = 80) => (typeof v === 'string' ? v.trim().slice(0, max) : '
 
 export function homeRouter({ store, service, env = process.env }) {
   const router = express.Router();
+  const cameras = new CameraDirectory();
   router.use(express.json({ limit: '64kb' }));
   router.use((req, res, next) => {
     res.setHeader('Cache-Control', 'private, no-store');
@@ -159,6 +161,14 @@ export function homeRouter({ store, service, env = process.env }) {
     if (!room) return res.status(404).json({ error: 'Room not found.' });
     const summary = await service.summaryForRoom(req.household, room, { debug: req.query.debug === '1' && req.isMember, fahrenheit: req.query.units === 'f' });
     res.json(req.isMember || req.isTeamViewer ? summary : { ...summary, debug: undefined, homeownerRecommendations: summary.homeownerRecommendations.map(x => ({ id: x.id, title: x.title, acknowledged: x.acknowledged })) });
+  });
+
+  router.get('/households/:id/cameras', loadSeriesReader, async (req, res) => {
+    const area = coarseLocation(req.household.location);
+    if (!area) return res.json({ cameras: [] });
+    const office = req.household.deviceKeys.some((k) => teamDeviceKeys(env).includes(k));
+    try { res.json({ cameras: await cameras.near(area, { prefer: office ? TEAM_OFFICE_CAMERAS : [] }) }); }
+    catch { res.status(503).json({ error: 'Cameras are temporarily unavailable.' }); }
   });
 
   router.get('/households/:id/rooms/:roomId/series', loadSeriesReader, (req, res) => {

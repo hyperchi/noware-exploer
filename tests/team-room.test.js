@@ -141,3 +141,14 @@ test('without an Open-Meteo key, production uses the nearest AirNow monitor', as
   const nowhere = await provider.getOutdoor({ location: { latitude: 10, longitude: 10, enabled: true } });
   assert.equal(nowhere.status, 'unavailable');
 });
+
+test('cameras list the preferred ones first, then the nearest, and skip out-of-service ones', async () => {
+  const { CameraDirectory } = await import('../lib/cameras.js');
+  const cam = (id, latitude, longitude, inService = 'true', url = `https://x.test/${id}/playlist.m3u8`) => ({ cctv: { inService, location: { locationName: `${id} -- I-80 : ${id}`, latitude: String(latitude), longitude: String(longitude) }, imageData: { streamingVideoURL: url, static: { currentImageURL: `https://x.test/${id}.jpg` } } } });
+  const data = { data: [cam('NEAR', 37.8, -122.4), cam('PREF', 37.78, -122.39), cam('OFF', 37.8, -122.4, 'false'), cam('NOVIDEO', 37.8, -122.4, 'true', ''), cam('FAR', 39, -120)] };
+  const dir = new CameraDirectory({ fetchImpl: async () => Response.json(data) });
+  const found = await dir.near({ latitude: 37.8, longitude: -122.4 }, { prefer: ['PREF'] });
+  assert.deepEqual(found.map(c => c.id), ['PREF', 'NEAR']);
+  assert.equal(found[1].name, 'I-80 : NEAR');
+  assert.equal(found[0].latitude, undefined);
+});
