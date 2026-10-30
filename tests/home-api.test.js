@@ -152,7 +152,7 @@ test('homeowner flows: summary, numbers, ack, feedback, contact payload, report,
   }
 });
 
-test('a physical cube published through the relay lands in the publisher\'s own home, labelled physical (flow A)', async () => {
+test('a physical cube published through the relay by a Noso account lands in the shared office home, labelled physical (flow A)', async () => {
   const { store, service, cookieFor, api, close, base, cubeStore } = await boot();
   process.env.GATEWAY_TOKENS = 'owned-gateway-token-0123456789abcdefgh:winston@noso.so';
   try {
@@ -166,7 +166,7 @@ test('a physical cube published through the relay lands in the publisher\'s own 
     assert.equal(me.json.households.length, 1);
     const hid = me.json.households[0].id;
     const h = await owner('GET', `/api/home/households/${hid}`);
-    assert.equal(h.json.household.name, "Winston's Home");
+    assert.equal(h.json.household.name, 'Noso Office');
     const office = h.json.household.rooms.find((r) => r.name === 'Office');
     assert.ok(office && office.devices.length === 1);
     const s = await owner('GET', `/api/home/households/${hid}/rooms/${office.id}/summary`);

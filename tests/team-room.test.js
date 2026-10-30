@@ -80,3 +80,26 @@ test('a teammate can publish the office cube into the shared room after the rela
     server.close();
   }
 });
+
+test('a Noso browser publishing without a device key feeds the shared office room', async () => {
+  const store = createHomeStore({ env: {} });
+  const app = createApp({ homeStore: store, homeService: new HomeService({ store }) });
+  const server = app.listen(0, '127.0.0.1'); await new Promise(r => server.once('listening', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const client = async email => {
+    const cookie = sessionCookie(await createSession({ email, sub: email }, { secret: process.env.SESSION_SECRET, domain: 'noso.so' }));
+    return (method, url, body) => fetch(base + url, { method, headers: { cookie, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  };
+  try {
+    const publisher = await client('publisher@noso.so'), teammate = await client('teammate@noso.so');
+    const t = Date.now() / 1000;
+    assert.equal((await publisher('POST', '/api/cube/live', { publisher: 'browser-publisher', sentAt: t, readings: [reading(t)], meta: { name: 'Noware' } })).status, 200);
+    const office = store.householdOfDevice('aircube-office');
+    assert.equal(office.name, 'Noso Office');
+    const me = await (await teammate('GET', '/api/home/me')).json();
+    assert.deepEqual(me.households.map(h => [h.id, h.shared]), [[office.id, true]]);
+    assert.equal((await teammate('GET', `/api/home/households/${office.id}/summary`)).status, 200);
+  } finally {
+    server.close();
+  }
+});
