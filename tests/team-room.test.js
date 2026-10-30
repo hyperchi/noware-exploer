@@ -152,3 +152,36 @@ test('cameras list the preferred ones first, then the nearest, and skip out-of-s
   assert.equal(found[1].name, 'I-80 : NEAR');
   assert.equal(found[0].latitude, undefined);
 });
+
+test('camera checks need new segments, retry once, hide failures, and distrust a total failure', async () => {
+  const { probeStream, checkCameras, CameraDirectory } = await import('../lib/cameras.js');
+  const stream = (sequences, segment = 'bytes') => { let i = 0; return async url => {
+    if (url.endsWith('playlist.m3u8')) return new Response('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nchunk.m3u8');
+    if (url.endsWith('chunk.m3u8')) return new Response(`#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:${sequences[i++]}\n#EXTINF:10\nseg.ts`);
+    return new Response(segment);
+  }; };
+  const url = 'https://x.test/a/playlist.m3u8';
+  assert.equal((await probeStream(url, { fetchImpl: stream([1, 2]), waitMs: 0 })).ok, true);
+  assert.match((await probeStream(url, { fetchImpl: stream([1, 1]), waitMs: 0 })).reason, /frozen/);
+  assert.match((await probeStream(url, { fetchImpl: stream([1, 2], ''), waitMs: 0 })).reason, /empty/);
+  assert.match((await probeStream(url, { fetchImpl: async () => new Response('', { status: 404 }), waitMs: 0 })).reason, /404/);
+  let calls = 0;
+  const [blip] = await checkCameras([{ id: 'A', name: 'A', streamUrl: url }], { probe: async () => ({ ok: ++calls > 1, reason: '' }) });
+  assert.equal(blip.ok, true);
+
+  const cam = id => ({ cctv: { inService: 'true', location: { locationName: `${id} -- ${id}`, latitude: '37.8', longitude: '-122.4' }, imageData: { streamingVideoURL: `https://x.test/${id}.m3u8`, static: {} } } });
+  let now = 1e12, dead = ['https://x.test/BAD.m3u8'], probes = 0;
+  const dir = new CameraDirectory({ fetchImpl: async () => Response.json({ data: [cam('GOOD'), cam('BAD')] }), clock: () => now, random: () => 0, probe: async u => { probes++; return { ok: !dead.includes(u), reason: 'down' }; } });
+  const log = console.log; console.log = () => {};
+  try {
+    const area = { latitude: 37.8, longitude: -122.4 };
+    assert.equal((await dir.near(area)).length, 2);
+    await dir.lastCheck;
+    assert.deepEqual((await dir.near(area)).map(c => c.id), ['GOOD']);
+    const before = probes; await dir.near(area); assert.equal(probes, before);
+    now += 6.1 * 3600 * 1000; dead = []; await dir.near(area); await dir.lastCheck;
+    assert.equal((await dir.near(area)).length, 2);
+    now += 6.1 * 3600 * 1000; dead = ['https://x.test/GOOD.m3u8', 'https://x.test/BAD.m3u8']; await dir.near(area); await dir.lastCheck;
+    assert.equal((await dir.near(area)).length, 2);
+  } finally { console.log = log; }
+});
