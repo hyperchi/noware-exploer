@@ -22,7 +22,8 @@ export class OutsideCamera {
     if (key === this.key) return;
     this.key = key; this.stop(); this.cameras = []; this.current = null; this.el.hidden = true;
     if (!key) return;
-    homeApi.cameras(id).then(({ cameras }) => {
+    homeApi.cameras(id).then(({ cameras, checkedAt }) => {
+      this.checkedAt = checkedAt;
       if (key !== this.key || !cameras.length) return;
       this.cameras = cameras; this.el.hidden = false; this.select(cameras[0]);
     }).catch(() => {});
@@ -56,7 +57,7 @@ export class OutsideCamera {
       } else if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
         this.video.src = camera.streamUrl;
       } else return failed();
-      this.status.textContent = `Live · ${camera.name} · about ${Math.max(0.1, camera.km)} km from this area's center · Caltrans`;
+      this.status.textContent = `Live · ${camera.name} · about ${Math.max(0.1, camera.km)} km from this area's center · Caltrans${this.checkedAt ? ` · Cameras checked ${new Date(this.checkedAt * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}` : ''}`;
       await this.video.play().catch(() => {});
     } catch { failed(); }
   }

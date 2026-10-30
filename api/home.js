@@ -167,7 +167,7 @@ export function homeRouter({ store, service, env = process.env }) {
     const area = coarseLocation(req.household.location);
     if (!area) return res.json({ cameras: [] });
     const office = req.household.deviceKeys.some((k) => teamDeviceKeys(env).includes(k));
-    try { res.json({ cameras: await cameras.near(area, { prefer: office ? TEAM_OFFICE_CAMERAS : [] }) }); }
+    try { const list = await cameras.near(area, { prefer: office ? TEAM_OFFICE_CAMERAS : [] }); res.json({ cameras: list, checkedAt: cameras.checkedAt }); }
     catch { res.status(503).json({ error: 'Cameras are temporarily unavailable.' }); }
   });
 
