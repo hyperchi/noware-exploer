@@ -35,6 +35,7 @@ export const homeApi = {
   updateHousehold: (id, patch) => call("PATCH", `${HOME}/households/${id}`, patch),
   summary: (id, { debug = false, units = "c" } = {}) => call("GET", `${HOME}/households/${id}/summary?debug=${debug ? 1 : 0}&units=${units}`),
   roomSummary: (id, roomId, { debug = false, units = "c" } = {}) => call("GET", `${HOME}/households/${id}/rooms/${roomId}/summary?debug=${debug ? 1 : 0}&units=${units}`),
+  cameras: (id) => call("GET", `${HOME}/households/${id}/cameras`),
   series: (id, roomId, seconds) => call("GET", `${HOME}/households/${id}/rooms/${roomId}/series?seconds=${seconds}`),
   ack: (id, eventId, recommendationId) => call("POST", `${HOME}/households/${id}/events/${encodeURIComponent(eventId)}/ack`, { recommendationId }),
   feedback: (id, eventId, body) => call("POST", `${HOME}/households/${id}/events/${encodeURIComponent(eventId)}/feedback`, body),
