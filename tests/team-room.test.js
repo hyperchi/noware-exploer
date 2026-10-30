@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createApp } from '../server.js';
 import { createHomeStore } from '../lib/home-store.js';
 import { HomeService } from '../lib/home-service.js';
+import { OpenMeteoOutdoorProvider } from '../lib/outdoor-provider.js';
 import { createSession, sessionCookie } from '../lib/session.js';
 
 process.env.SESSION_SECRET ||= 'team-room-test-secret-team-room-test-secret';
@@ -47,7 +48,9 @@ test('the office room is readable by every Noso account and nothing else is', as
 
     // Read-only for the team.
     assert.equal((await teammate('PATCH', `/api/home/households/${office.id}`, { name: 'Mine' })).status, 403);
-    assert.equal((await teammate('PUT', `/api/home/households/${office.id}/location`, { enabled: false })).status, 403);
+    assert.equal((await teammate('PUT', `/api/home/households/${office.id}/location`, { latitude: 37.7, longitude: -122.4, label: 'San Francisco, CA 94110', enabled: true })).status, 200);
+    assert.equal((await teammate('PUT', `/api/home/households/${privateId}/location`, { latitude: 37.7, longitude: -122.4, enabled: true })).status, 403);
+    assert.equal((await guest('PUT', `/api/home/households/${office.id}/location`, { latitude: 37.7, longitude: -122.4, enabled: true })).status, 403);
     assert.equal((await teammate('POST', `/api/home/households/${office.id}/observations`, { roomId: room.id, type: 'cooking' })).status, 403);
     // Other homes stay private, guests get nothing.
     assert.equal((await teammate('GET', `/api/home/households/${privateId}/summary`)).status, 403);
@@ -96,7 +99,7 @@ test('a Noso browser publishing without a device key feeds the shared office roo
     assert.equal((await publisher('POST', '/api/cube/live', { publisher: 'browser-publisher', sentAt: t, readings: [reading(t)], meta: { name: 'Noware' } })).status, 200);
     const office = store.householdOfDevice('aircube-office');
     assert.equal(office.name, 'Noso Office');
-    assert.equal(office.location.label, 'San Francisco, California, United States');
+    assert.equal(office.location.label, 'San Francisco, CA 94107');
     store.upsertHousehold({ ...office, location: null });
     assert.equal((await publisher('POST', '/api/cube/live', { publisher: 'browser-publisher', sentAt: t + 1, readings: [reading(t + 1)], meta: { name: 'Noware' } })).status, 200);
     assert.equal(store.householdOfDevice('aircube-office').location, null);
@@ -107,4 +110,13 @@ test('a Noso browser publishing without a device key feeds the shared office roo
   } finally {
     server.close();
   }
+});
+
+test('a US ZIP code finds an area without an Open-Meteo key, and city search explains itself', async () => {
+  const urls = [];
+  const provider = new OpenMeteoOutdoorProvider({ production: true, apiKey: '', fetchImpl: async url => { urls.push(String(url)); return String(url).endsWith('/00000') ? new Response('{}', { status: 404 }) : Response.json({ places: [{ 'place name': 'San Francisco', 'state abbreviation': 'CA', latitude: '37.7509', longitude: '-122.4153' }] }); } });
+  assert.deepEqual(await provider.searchLocations('94110'), [{ latitude: 37.8, longitude: -122.4, label: 'San Francisco, CA 94110', precision: 'area', enabled: true }]);
+  assert.deepEqual(await provider.searchLocations('00000'), []);
+  await assert.rejects(provider.searchLocations('San Francisco'), /ZIP code/);
+  assert.equal(urls.length, 2);
 });

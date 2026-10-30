@@ -59,8 +59,8 @@ export function openLocationPicker(feed) {
       locate.disabled = false;
     }, () => { locate.disabled = false; message.textContent = 'Could not use location. You can choose your city below.'; }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 });
   } });
-  const query = h('input', { id: 'aqi-city', type: 'search', placeholder: 'City or postal code', minlength: '2', maxlength: '100', required: true });
-  const search = h('button.simple-button', { type: 'submit', text: 'Find city' });
+  const query = h('input', { id: 'aqi-city', type: 'search', placeholder: 'ZIP code or city', minlength: '2', maxlength: '100', required: true });
+  const search = h('button.simple-button', { type: 'submit', text: 'Find area' });
   const form = h('form', { onsubmit: async e => {
     e.preventDefault(); search.disabled = true; fill(results); message.textContent = 'Finding places…';
     try {
@@ -69,7 +69,7 @@ export function openLocationPicker(feed) {
       fill(results, ...response.locations.map(area => h('button.simple-button', { type: 'button', text: area.label, onclick: () => { message.textContent = 'Looking up outdoor air…'; save(area); } })));
     } catch (err) { message.textContent = err.message; }
     finally { search.disabled = false; }
-  } }, h('label', { for: 'aqi-city', text: 'Or choose a city' }), h('div.aqi-search', query, search));
+  } }, h('label', { for: 'aqi-city', text: 'Or enter a ZIP code or city' }), h('div.aqi-search', query, search));
   const remove = feed.household?.household?.location ? h('button.simple-button', { type: 'button', text: 'Stop using location', onclick: async () => {
     try { await homeApi.setLocation(feed.householdId, { enabled: false }); await feed.reloadHousehold(); close(); } catch (e) { message.textContent = e.message; }
   } }) : null;
