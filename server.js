@@ -22,9 +22,29 @@ export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={})
  const app=express();
  const store=homeStore||(process.env.NOWARE_STORE_BUCKET ? new CloudHomeStore({bucket:process.env.NOWARE_STORE_BUCKET}) : createHomeStore());
  const service=homeService||new HomeService({store,outdoorProvider:new OpenMeteoOutdoorProvider()});
- const ready=store.ready ? store.ready.then(()=>{if(!homeService)for(const key of store.engineKeys())service.engines.set(key,RoomEngine.fromJSON(store.loadEngine(key)))}) : Promise.resolve();
+ // Hydrate the engines from whatever the store has loaded. Takes the load
+ // promise explicitly: on a retry we must await the NEW attempt, never the
+ // original rejected `store.ready`, or recovery could never succeed.
+ const hydrate=load=>load.then(()=>{if(!homeService)for(const key of store.engineKeys())service.engines.set(key,RoomEngine.fromJSON(store.loadEngine(key)))});
+ // Mark every load attempt as handled the moment it is created. `readiness()`
+ // attaches the real handlers per request, which can be long after this
+ // rejects -- and Node's default for an unhandled rejection is to exit, so an
+ // unreachable bucket would take the container down instead of serving 503.
+ const settle=p=>{p.catch(()=>{});return p};
+ let ready=settle(hydrate(store.ready||Promise.resolve()));
+ let retrying=false;
+ // A rejected `ready` used to be latched for the life of the process, so a
+ // transient GCS or IAM failure held every request at 503 until someone
+ // redeployed. Re-attempt on the next request instead, one attempt at a time.
+ const readiness=()=>{
+  if(!retrying){
+   retrying=true;
+   ready=settle(ready.catch(()=>hydrate(store.loadCloud?store.loadCloud():Promise.resolve())).finally(()=>{retrying=false}));
+  }
+  return ready;
+ };
  app.locals.ready=ready;
- app.use((req,res,next)=>ready.then(()=>next(),()=>res.status(503).json({error:'Air data storage unavailable.'})));
+ app.locals.readiness=readiness;
  app.locals.homeStore=store;app.locals.homeService=service;
  // Outside production, a first-time publisher joins the seeded demo home instead of getting a bare one.
  if(!service.beforeCreateHousehold)service.beforeCreateHousehold=email=>{if(demoEnabled())seedDemo({store,service,userEmail:email,timeZone:process.env.NOWARE_TIMEZONE||'America/Los_Angeles'})};
@@ -33,6 +53,10 @@ export function createApp({cubeStore,onLive,onHistory,homeStore,homeService}={})
  app.disable('x-powered-by');
  app.use((req,res,next)=>{res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');res.setHeader('Cross-Origin-Opener-Policy','same-origin-allow-popups');next()});
  app.get('/api/health',(req,res)=>res.status(200).send('ok'));
+ // Storage gate sits AFTER /api/health deliberately: health reports whether the
+ // process is serving, not whether GCS is reachable. Gating it too made a
+ // storage outage look like a dead deployment and blinded the deploy smoke test.
+ app.use((req,res,next)=>readiness().then(()=>next(),()=>res.status(503).json({error:'Air data storage unavailable.'})));
  // This header controls canonical URLs only; authentication is always required.
  app.use((req,res,next)=>{
   if(req.hostname.endsWith('.run.app') && req.get('X-Noware-Public-Host')!=='noware.so')
